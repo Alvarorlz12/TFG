@@ -7,7 +7,7 @@ data:
   split_path: "splits/short.json"
   num_classes: 5  # Background, Pancreas, Tumor, Arteries, Veins
   input_size: [16, 16]  # Images size
-  num_workers: 4  # Number of workers to use in the DataLoader
+  num_workers: 2  # Number of workers to use in the DataLoader
   batch_size: 4  # Number of samples in each batch
 
 model:
