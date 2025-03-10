@@ -82,5 +82,5 @@ def load_train_test_split(split_path="data/splits/train_test_split.json"):
     dict
         Dictionary containing the train-test split.
     """
-    with open(split_path, "r") as f:
+    with open(os.path.normpath(split_path), "r") as f:
         return json.load(f)

@@ -7,7 +7,8 @@ class Logger:
     LEVELS = {"DEBUG": logging.DEBUG, "INFO": logging.INFO,
               "WARNING": logging.WARNING, "ERROR": logging.ERROR}
 
-    def __init__(self, log_dir = "experiments/logs", verbosity = "INFO"):
+    def __init__(self, log_dir = "experiments/logs", verbosity = "INFO",
+                 console = False):
         """
         Initialize the logger and create log directory.
 
@@ -17,6 +18,8 @@ class Logger:
             Directory to save the logs.
         verbosity : str, optional
             Verbosity level of the logger
+        console : bool, optional
+            Whether to log to console.
         """
         self.log_dir = log_dir
         os.makedirs(log_dir, exist_ok=True)
@@ -38,19 +41,23 @@ class Logger:
                 logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
             )
 
-            # Console handler
-            console_handler = logging.StreamHandler()
-            console_handler.setLevel(verbosity_level)
-            console_handler.setFormatter(
-                logging.Formatter("%(levelname)s - %(message)s")
-            )
-
-            # Add handlers to the logger
+            # Add handler to the logger
             self.logger.addHandler(file_handler)
-            self.logger.addHandler(console_handler)
+            
+            if console:
+                # Console handler
+                console_handler = logging.StreamHandler()
+                console_handler.setLevel(verbosity_level)
+                console_handler.setFormatter(
+                    logging.Formatter("%(levelname)s - %(message)s")
+                )
+                self.logger.addHandler(console_handler)
 
             # Save handlers for closing
-            self.handlers = [file_handler, console_handler]
+            if console:
+                self.handlers = [file_handler, console_handler]
+            else:
+                self.handlers = [file_handler]
 
     def log(self, metrics, step = None):
         """

@@ -1,31 +1,23 @@
 import os
 import torch
 import cv2
-import json
 import numpy as np
 import nibabel as nib
 
 from torch.utils.data import Dataset
 from collections import defaultdict
 
-from src.utils.config import load_config
 from src.data.split_data import load_train_test_split
-
-# Load the configuration file
-config = load_config()["data"]
-
-# Config variables
-ROOT_DIR = config["root_dir"]
-RAW_DIR = config["raw_dir"]
-NUM_CLASSES = config["num_classes"]
-INPUT_SIZE = config["input_size"]
-TEST_SPLIT = config["test_split"]
-SPLIT_PATH = config["split_path"]
 
 # Dataset class
 class PancreasDataset(Dataset):
-    def __init__(self, sample_dirs, split_type="train", resize=(32,32), 
-                 augment=False):
+    def __init__(self, 
+                 sample_dirs,
+                 split_path="data/splits/train_test_split.json",
+                 split_type="train",
+                 resize=(512,512),
+                 augment=False
+    ):
         """
         Initialize the Pancreas dataset. The dataset is loaded from the
         NIfTI files in the sample directories. The segmentation masks are
@@ -50,7 +42,7 @@ class PancreasDataset(Dataset):
 
         # Load the train-test split if specified
         if split_type != "all":
-            split_dict = load_train_test_split(SPLIT_PATH)
+            split_dict = load_train_test_split(split_path=split_path)
             if split_type not in split_dict:
                 raise ValueError(f"Invalid split type: {split_type}")
             self.patient_ids = split_dict[split_type]

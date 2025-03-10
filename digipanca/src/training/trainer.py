@@ -1,4 +1,5 @@
 import os
+import time
 import torch
 import json
 from tqdm import tqdm
@@ -122,8 +123,14 @@ class Trainer:
         self.model.train()
         train_loss = 0.0
         all_metrics = {}
+        train_loop = tqdm(
+            self.train_loader,
+            desc=f"[Train {epoch+1}/{self.num_epochs}]",
+            leave=False,
+            colour="green"
+        )
 
-        for images, masks, _ in tqdm(self.train_loader, desc=f"Epoch {epoch} [Train]"):
+        for images, masks, _ in train_loop:
             images = images.to(self.device)
             masks = masks.to(self.device)
 
@@ -145,11 +152,15 @@ class Trainer:
                     step=epoch
                 )
 
+            train_loop.set_postfix(
+                loss=f"{loss.item():.4f}",
+                dice=f"{batch_metrics.get('dice', 0):.4f}"
+            )
+
         train_metrics = {
             k: v / len(self.train_loader) for k, v in all_metrics.items()
         }
         avg_loss = train_loss / len(self.train_loader)
-        print(f"📉 Epoch {epoch} - Train Loss: {avg_loss:.4f}")
         return avg_loss, train_metrics
 
     def val_step(self, epoch):
@@ -171,9 +182,15 @@ class Trainer:
         self.model.eval()
         val_loss = 0.0
         all_metrics = {}
+        val_loop = tqdm(
+            self.val_loader,
+            desc=f"[Valid {epoch+1}/{self.num_epochs}]",
+            leave=False,
+            colour="blue"
+        )
 
         with torch.no_grad():
-            for images, masks, _ in tqdm(self.val_loader, desc=f"Epoch {epoch} [Val]"):
+            for images, masks, _ in val_loop:
                 images = images.to(self.device)
                 masks = masks.to(self.device)
 
@@ -188,15 +205,16 @@ class Trainer:
 
                 if self.logger:
                     self.logger.log(
-                        {"val_loss": loss.item(), **batch_metrics},
+                        {"valid_loss": loss.item(), **batch_metrics},
                         step=epoch
                     )
+
+                val_loop.set_postfix(loss=loss.item())
 
         val_metrics = {
             k: v / len(self.val_loader) for k, v in all_metrics.items()
         }
         avg_loss = val_loss / len(self.val_loader)
-        print(f"📝 Epoch {epoch} - Val Loss: {avg_loss:.4f}")
         return avg_loss, val_metrics
 
     def train(self):
@@ -204,9 +222,13 @@ class Trainer:
         Train the model for the specified number of epochs and return the
         training and validation losses.
         """
-        for epoch in range(1, self.num_epochs + 1):
-            train_loss, train_metrics = self.train_epoch(epoch)
-            val_loss, val_metrics = self.val_epoch(epoch)
+        loop = tqdm(range(self.num_epochs), colour="yellow")
+        loop.set_description(f"Epoch [0/{self.num_epochs}]")
+        loop.set_postfix(valid_loss="N/A")
+        start_time = time.time()
+        for epoch in loop:
+            train_loss, train_metrics = self.train_step(epoch)
+            val_loss, val_metrics = self.val_step(epoch)
 
             # Save the metrics
             self._save_metrics(epoch, train_loss, val_loss, train_metrics,
@@ -223,5 +245,16 @@ class Trainer:
 
             # Early stopping
             if self.early_stopping(val_loss):
-                print("Early stopping in epoch", epoch)
+                tqdm.write(f"Early stopping at epoch {epoch}")
                 break
+
+            # Update progress bar
+            loop.set_description(f"Epoch [{epoch+1}/{self.num_epochs}]")
+            loop.set_postfix(
+                valid_loss=val_loss
+            )
+
+        total_time = time.time() - start_time
+        hours, rem = divmod(total_time, 3600)
+        minutes, seconds = divmod(rem, 60)
+        tqdm.write(f"Training completed in {int(hours):0>2}:{int(minutes):0>2}:{seconds:05.2f}")

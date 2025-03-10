@@ -39,6 +39,10 @@ def main():
     config = load_config(args.config)
     RAW_DIR = config['data']['raw_dir']
     
+    # Show experiment information
+    print("Experiment:", args.experiment)
+    print("Description:", config['description'])
+    
     # Set up experiment directory
     experiment_dir = Path(f"experiments/{args.experiment}")
     experiment_dir.mkdir(parents=True, exist_ok=True)
@@ -50,11 +54,13 @@ def main():
     sample_dirs = [os.path.join(RAW_DIR, sd) for sd in os.listdir(RAW_DIR)]
     train_dataset = PancreasDataset(
         sample_dirs=sample_dirs,
+        split_path=config['data']['split_path'],
         split_type='train',
         resize=tuple(config['data']['input_size'])
     )
     val_dataset = PancreasDataset(
-        data_dir=sample_dirs,
+        sample_dirs=sample_dirs,
+        split_path=config['data']['split_path'],
         split_type='val',
         resize=tuple(config['data']['input_size'])
     )
@@ -99,6 +105,7 @@ def main():
     )
     
     # Train model
+    print("📉 Training model...")
     trainer.train()
 
 

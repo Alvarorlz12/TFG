@@ -6,7 +6,7 @@ data:
   raw_dir: "raw"  # Directory containing the raw data
   split_path: "splits/short.json"
   num_classes: 5  # Background, Pancreas, Tumor, Arteries, Veins
-  input_size: [240, 240]  # Images size
+  input_size: [16, 16]  # Images size
   num_workers: 4  # Number of workers to use in the DataLoader
   batch_size: 4  # Number of samples in each batch
 
@@ -17,7 +17,7 @@ model:
   init_features: 32
 
 training:
-  num_epochs: 30
+  num_epochs: 2
   learning_rate: 0.0001
   weight_decay: 0.00001
   loss_function:  "MulticlassDiceLoss"

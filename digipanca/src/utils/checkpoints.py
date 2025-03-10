@@ -1,5 +1,6 @@
 import os
 import torch
+from tqdm import tqdm
 
 def save_checkpoint(model, optimizer, epoch, loss, checkpoint_dir="checkpoints",
                     filename="model.pth"):
@@ -30,7 +31,7 @@ def save_checkpoint(model, optimizer, epoch, loss, checkpoint_dir="checkpoints",
         "loss": loss,
     }
     torch.save(checkpoint, checkpoint_path)
-    print(f"Saved checkpoint: {checkpoint_path}")
+    tqdm.write(f"Saved checkpoint: {checkpoint_path}")
 
 def load_checkpoint(model, optimizer, checkpoint_path):
     """

@@ -1,4 +1,5 @@
 import os
+from tqdm import tqdm
 
 from src.utils.checkpoints import save_checkpoint
 
@@ -6,7 +7,7 @@ class ModelCheckpoint:
     """
     Save the best model checkpoint based on the given metric.
     """
-    def __init__(self, checkpoint_dir, metric_name="val_loss", mode="min"):
+    def __init__(self, checkpoint_dir, metric_name="valid_loss", mode="min"):
         self.checkpoint_dir = checkpoint_dir
         self.metric_name = metric_name
         self.mode = mode
@@ -15,7 +16,8 @@ class ModelCheckpoint:
 
     def __call__(self, model, optimizer, epoch, loss, metrics):
         """
-        Save the model checkpoint if the metric improves.
+        Save the model checkpoint if the metric improves. If the metric is not
+        found in the metrics dictionary, the loss is used.
 
         Parameters
         ----------
@@ -30,7 +32,10 @@ class ModelCheckpoint:
         metrics : dict
             Dictionary of metrics for the epoch.
         """
-        current_value = metrics.get(self.metric_name, None)
+        if self.metric_name not in metrics:
+            current_value = loss
+        else:
+            current_value = metrics.get(self.metric_name, None)
         if current_value is None:
             return
         
@@ -45,13 +50,14 @@ class ModelCheckpoint:
                 checkpoint_dir=self.checkpoint_dir,
                 filename=f"best_model_epoch{epoch}.pth"
             )
+            tqdm.write(f"New best model saved at epoch {epoch} with {self.metric_name}: {current_value:.6f}")
             
 class EarlyStopping:
     """
     Early stopping to stop the training when the loss does not improve after
     a certain number of epochs.
     """
-    def __init__(self, patience=5, metric_name="val_loss", mode="min"):
+    def __init__(self, patience=5, metric_name="valid_loss", mode="min"):
         self.patience = patience
         self.metric_name = metric_name
         self.mode = mode
