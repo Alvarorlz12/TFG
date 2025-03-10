@@ -1,0 +1,162 @@
+import os
+import torch
+import cv2
+import json
+import numpy as np
+import nibabel as nib
+
+from torch.utils.data import Dataset
+from collections import defaultdict
+
+from src.utils.config import load_config
+from src.data.split_data import load_train_test_split
+
+# Load the configuration file
+config = load_config()["data"]
+
+# Config variables
+ROOT_DIR = config["root_dir"]
+RAW_DIR = config["raw_dir"]
+NUM_CLASSES = config["num_classes"]
+INPUT_SIZE = config["input_size"]
+TEST_SPLIT = config["test_split"]
+SPLIT_PATH = config["split_path"]
+
+# Dataset class
+class PancreasDataset(Dataset):
+    def __init__(self, sample_dirs, split_type="train", resize=(32,32), 
+                 augment=False):
+        """
+        Initialize the Pancreas dataset. The dataset is loaded from the
+        NIfTI files in the sample directories. The segmentation masks are
+        created by combining the masks for pancreas, tumor, arteries, and veins.
+
+        Parameters
+        ----------
+        sample_dirs : list
+            List of directories containing the samples.
+        split_type : str
+            Type of split to load (train, val, or test). Default is train.
+            Use "all" to load all samples.
+        resize : tuple
+            Size to resize the images to.
+        augment : bool
+            Whether to apply augmentations to the images.
+        """
+        self.sample_dirs = sample_dirs
+        self.resize = resize
+        self.augment = augment
+        self.slices = defaultdict(list)
+
+        # Load the train-test split if specified
+        if split_type != "all":
+            split_dict = load_train_test_split(SPLIT_PATH)
+            if split_type not in split_dict:
+                raise ValueError(f"Invalid split type: {split_type}")
+            self.patient_ids = split_dict[split_type]
+        else:
+            self.patient_ids = [os.path.basename(p) for p in sample_dirs]
+
+        print(f"📊 Loading dataset ({split_type})... {len(self.patient_ids)} patients found.")
+
+        all_min, all_max = [], []
+
+        for sample_dir in sample_dirs:
+            patient_id = os.path.basename(sample_dir)
+            if patient_id not in self.patient_ids:
+                continue
+
+            # Load NIfTI files and create segmentation mask
+            image, masks = self._load_nifti_slices(sample_dir)
+            all_min.append(np.min(image))
+            all_max.append(np.max(image))
+
+            for i in range(image.shape[2]): # i is the slice index
+                # Rotate for correct visualization
+                img_slice = np.fliplr(np.rot90(image[:, :, i], k=-1))
+                masks_slice = np.fliplr(np.rot90(masks[:, :, i], k=-1))
+
+                self.slices[patient_id].append((img_slice, masks_slice))
+
+        # Flatten slices for indexing
+        self.flat_slices = [
+            (img, mask, pid) for pid, slices in self.slices.items() 
+            for img, mask in slices
+        ]
+
+        self.global_min = np.min(all_min)
+        self.global_max = np.max(all_max)
+
+        print(f"📊 Dataset loaded with {len(self.flat_slices)} slices.")
+
+    def __len__(self):
+        return len(self.flat_slices)
+    
+    def __getitem__(self, idx):
+        img, mask, pid = self.flat_slices[idx]
+
+        # Normalize images
+        img = (img - self.global_min) / (self.global_max - self.global_min)
+
+        # Resize images
+        if self.resize:
+            img = cv2.resize(img, self.resize, interpolation=cv2.INTER_CUBIC)
+            mask = cv2.resize(mask, self.resize, interpolation=cv2.INTER_NEAREST)
+
+        # Apply augmentations
+        if self.augment:
+            augmented = self.augmentations(image=img, mask=mask)
+            img = augmented['image']
+            mask = augmented['mask']
+
+        # Convert to tensors
+        img = torch.FloatTensor(img).unsqueeze(0)
+        mask = torch.LongTensor(mask)
+
+        return img, mask, pid
+    
+    @staticmethod
+    def _load_nifti_slices(sample_dir):
+        """
+        Load the NIfTI files for a given patient and create a segmentation mask.
+        The segmentation mask is created by combining the masks for pancreas, 
+        tumor, arteries, and veins.
+
+        Parameters:
+        -----------
+        sample_dir : str
+            Path to the patient directory.
+
+        Returns:
+        --------
+        image : np.ndarray
+            3D image volume.
+        masks : np.ndarray
+            Combined segmentation mask.
+        """
+        patient_id = os.path.basename(os.path.normpath(sample_dir))
+        image_path = os.path.join(sample_dir, "SEQ", f"CTport-{patient_id}.nii")
+        mask_paths = {
+            "pancreas": os.path.join(sample_dir, "SEG", 
+                                     f"Pancreas-{patient_id}.nii"),
+            "tumor": os.path.join(sample_dir, "SEG", f"Tumor-{patient_id}.nii"),
+            "arteries": os.path.join(sample_dir, "SEG", 
+                                     f"Arterias-{patient_id}.nii"),
+            "veins": os.path.join(sample_dir, "SEG", f"Venas-{patient_id}.nii"),
+        }
+
+        image = nib.load(image_path).get_fdata()
+        num_slices = image.shape[2]
+        masks = np.zeros_like(image)
+
+        # Combine the segmentation masks
+        for i, (_, path) in enumerate(mask_paths.items(), start=1):
+            mask_data = nib.load(path).get_fdata()
+            # Ensure the number of slices match the image
+            mask_data = mask_data[:, :, :num_slices]
+            # Binarize the mask
+            mask_data = (mask_data > 0).astype(np.uint8)
+            # Class label assignment: 1 for pancreas, 2 for tumor...
+            masks[mask_data > 0] = i
+
+        return image, masks

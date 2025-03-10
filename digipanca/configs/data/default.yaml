@@ -1,0 +1,12 @@
+data:
+  root_dir: "data"  # Root directory of the dataset
+  raw_dir: "raw"  # Directory containing the raw data
+  processed_dir: "processed"  # Directory containing the processed data
+  split_path: "data/splits/train_test_split.json"
+  num_classes: 5  # Background, Pancreas, Tumor, Arteries, Veins
+  input_size: [512, 512]  # Images size
+  test_split: 0.15 # Prportion of the dataset to include in the test split
+  val_split: 0.15  # Proportion of the dataset to include in the validation split
+  shuffle: true
+  num_workers: 4  # Number of workers to use in the DataLoader
+  batch_size: 4  # Number of samples in each batch

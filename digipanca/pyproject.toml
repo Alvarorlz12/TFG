@@ -1,0 +1,35 @@
+[build-system]
+requires = ["setuptools>=64.0.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pancreas-segmentation"
+version = "0.1.0"
+description = "Deep learning project for pancreatic cancer segmentation"
+readme = "README.md"
+requires-python = ">=3.9"
+license = {text = "MIT"}
+authors = [
+    {name = "Álvaro Ruiz López", email = "alvaroruiz27@correo.ugr.es"},
+]
+keywords = ["medical-imaging", "segmentation", "deep-learning", "pytorch"]
+dependencies = [
+    "torch>=1.9.0",
+    "torchvision>=0.10.0",
+    "numpy>=1.20.0",
+    "pillow>=8.0.0",
+    "scikit-image>=0.18.0",
+    "scikit-learn>=0.24.0",
+    "matplotlib>=3.4.0",
+    "tensorboard>=2.5.0",
+    "tqdm>=4.60.0",
+    "pyyaml>=5.4.0",
+    "SimpleITK>=2.1.0",
+    "nibabel>=3.2.0",
+    "jupyter>=1.0.0",
+    "opencv-python>=4.10.0",
+    # Add monai when needed: "monai>=0.8.0",
+]
+
+[tool.setuptools]
+packages = ["src"]
