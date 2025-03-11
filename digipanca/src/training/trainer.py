@@ -136,7 +136,12 @@ class Trainer:
 
             self.optimizer.zero_grad()
             outputs = self.model(images)
+            if isinstance(outputs, dict):
+                outputs = outputs["out"]
             loss = self.loss_fn(outputs, masks)
+            # Check if loss is CombinedLoss which returns a tuple of losses
+            if isinstance(loss, tuple):
+                loss = loss[0]  # Use only the first loss
             loss.backward()
             self.optimizer.step()
 
@@ -195,7 +200,15 @@ class Trainer:
                 masks = masks.to(self.device)
 
                 outputs = self.model(images)
+                
+                if isinstance(outputs, dict):
+                    outputs = outputs["out"]
+
                 loss = self.loss_fn(outputs, masks)
+
+                # Check if loss is CombinedLoss which returns a tuple of losses
+                if isinstance(loss, tuple):
+                    loss = loss[0]  # Use only the first loss
 
                 val_loss += loss.item()
                 batch_metrics = self.metrics.all_metrics(outputs, masks)
@@ -222,9 +235,10 @@ class Trainer:
         Train the model for the specified number of epochs and return the
         training and validation losses.
         """
-        loop = tqdm(range(self.num_epochs), colour="yellow")
+        loop = tqdm(range(self.num_epochs), colour="red")
         loop.set_description(f"Epoch [0/{self.num_epochs}]")
-        loop.set_postfix(valid_loss="N/A")
+        loop.set_postfix(train_loss="N/A", valid_loss="N/A",train_dice="N/A", valid_dice="N/A")
+        # loop.set_postfix(valid_loss="N/A")
         start_time = time.time()
         for epoch in loop:
             train_loss, train_metrics = self.train_step(epoch)
@@ -250,8 +264,14 @@ class Trainer:
 
             # Update progress bar
             loop.set_description(f"Epoch [{epoch+1}/{self.num_epochs}]")
+            # loop.set_postfix(
+            #     valid_loss=val_loss
+            # )
             loop.set_postfix(
-                valid_loss=val_loss
+                train_loss=f"{train_loss:.4f}",
+                valid_loss=f"{val_loss:.4f}",
+                train_dice=f"{train_metrics.get('dice', 0):.4f}",
+                valid_dice=f"{val_metrics.get('dice', 0):.4f}"
             )
 
         total_time = time.time() - start_time

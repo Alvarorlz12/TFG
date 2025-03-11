@@ -6,8 +6,8 @@ from pathlib import Path
 from torch.utils.data import DataLoader
 
 from src.utils.config import load_config
-from src.models.standard_unet import UNet
-from src.losses.dice import MulticlassDiceLoss
+from src.models import UNet, CustomDeepLabV3
+from src.losses import MulticlassDiceLoss, CombinedLoss
 from src.data.dataset import PancreasDataset
 from src.training.trainer import Trainer
 from src.utils.logger import Logger
@@ -22,8 +22,32 @@ def get_model(config):
             out_channels=config['model']['out_channels'],
             init_features=config['model']['init_features']
         )
+    elif model_type == 'deeplabv3':
+        return CustomDeepLabV3(
+            num_classes=config['model']['num_classes'],
+            dropout_rate=config['model']['dropout_rate'],
+            pretrained=config['model']['pretrained']
+        )
     else:
         raise ValueError(f"Unsupported model type: {model_type}")
+
+def get_loss_fn(config):
+    """Initialize loss function based on configuration."""
+    loss_type = config['training']['loss_function']
+
+    if loss_type == 'MulticlassDiceLoss':
+        return MulticlassDiceLoss()
+    elif loss_type == 'CombinedLoss':
+        weights = config['training']['loss_params'].get('weights', None)
+        if weights is not None:
+            weights = torch.tensor(weights).to(torch.float32)
+        return CombinedLoss(
+            alpha=config['training']['loss_params']['alpha'],
+            beta=config['training']['loss_params']['beta'],
+            class_weights=weights
+        )
+    else:
+        raise ValueError(f"Unsupported loss function: {loss_type}")
 
 def main():
     parser = argparse.ArgumentParser(
@@ -75,7 +99,7 @@ def main():
     val_loader = DataLoader(
         val_dataset,
         batch_size=config['data']['batch_size'],
-        shuffle=False,
+        shuffle=True,
         num_workers=config['data']['num_workers']
     )
     
@@ -83,10 +107,10 @@ def main():
     model = get_model(config)
     
     # Initialize loss function
-    loss_fn = MulticlassDiceLoss()
+    loss_fn = get_loss_fn(config)
     
     # Initialize optimizer
-    optimizer = torch.optim.Adam(
+    optimizer = torch.optim.AdamW(
         model.parameters(),
         lr=config['training']['learning_rate'],
         weight_decay=config['training']['weight_decay']

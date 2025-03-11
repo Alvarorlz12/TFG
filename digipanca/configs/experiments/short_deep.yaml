@@ -1,0 +1,29 @@
+name: "short_deep"
+description: "Test experiment with DeepLabV3"  # Description of the experiment
+
+data:
+  root_dir: "data"  # Root directory of the dataset
+  raw_dir: "raw"  # Directory containing the raw data
+  split_path: "splits/short.json"
+  num_classes: 5  # Background, Pancreas, Tumor, Arteries, Veins
+  input_size: [16, 16]  # Images size
+  num_workers: 2  # Number of workers to use in the DataLoader
+  batch_size: 4  # Number of samples in each batch
+
+model:
+  type: deeplabv3
+  num_classes: 5
+  dropout_rate: 0.2
+  pretrained: True
+
+training:
+  num_epochs: 1
+  learning_rate: 0.0001
+  weight_decay: 0.00001
+  loss_function:  "CombinedLoss"
+  loss_params:
+    alpha: 1.0
+    beta: 1.0
+    weights: [0.3, 1.0, 2.0, 1.0, 1.0]
+  device: "cpu"
+  patience: 5

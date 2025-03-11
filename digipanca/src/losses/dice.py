@@ -49,8 +49,8 @@ class MulticlassDiceLoss(nn.Module):
         y_pred_softmax = F.softmax(y_pred, dim=1)
 
         # Initialize loss
-        dice_loss = 0
-        class_count = 0
+        dice_loss = 0.0
+        total_weight = 0.0
 
         # Initialize class range (0 if background is not ignored, 1 otherwise)
         start_class = 1 if self.ignore_background else 0
@@ -69,13 +69,14 @@ class MulticlassDiceLoss(nn.Module):
             # Apply class weights
             weight = 1.0
             if self.class_weights is not None:
-                weight = self.class_weights[class_idx]
+                weight_idx = class_idx - start_class  # Fix weight indexing
+                weight = self.class_weights[weight_idx]
 
             # Update loss
-            dice_loss += (1.0 - dice) * weight
-            class_count += weight
+            dice_loss += (1.0 - dice.mean()) * weight
+            total_weight += weight
 
         # Normalize loss
-        if class_count > 0:
-            return dice_loss / class_count
+        if total_weight > 0:
+            return dice_loss / total_weight
         return dice_loss / (num_classes - start_class)
