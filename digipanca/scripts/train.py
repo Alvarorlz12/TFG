@@ -40,8 +40,9 @@ def get_loss_fn(config):
     elif loss_type == 'CombinedLoss':
         weights = config['training']['loss_params'].get('weights', None)
         if weights is not None:
+            device = config["training"]["device"]
             weights = torch.tensor(weights).device(
-                config["device"] if torch.cuda.is_available() else "cpu"
+                device if torch.cuda.is_available() else "cpu"
             )
         return CombinedLoss(
             alpha=config['training']['loss_params']['alpha'],
