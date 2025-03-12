@@ -1,0 +1,11 @@
+{
+    "train": [
+        "rtum35"
+    ],
+    "val": [
+        "rtum6"
+    ],
+    "test": [
+        "rtum79"
+    ]
+}

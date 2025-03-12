@@ -31,6 +31,11 @@ class ModelCheckpoint:
             Current loss.
         metrics : dict
             Dictionary of metrics for the epoch.
+
+        Returns
+        -------
+        bool
+            True if the model checkpoint was saved, False otherwise.
         """
         if self.metric_name not in metrics:
             current_value = loss
@@ -42,6 +47,9 @@ class ModelCheckpoint:
         if (self.mode == "min" and current_value < self.best_metric) or \
            (self.mode == "max" and current_value > self.best_metric):
             self.best_metric = current_value
+            self.best_epoch = epoch
+            self.best_loss = loss
+            self.best_metrics = metrics
             save_checkpoint(
                 model=model,
                 optimizer=optimizer,
@@ -51,7 +59,23 @@ class ModelCheckpoint:
                 filename=f"best_model_epoch{epoch}.pth"
             )
             tqdm.write(f"New best model saved at epoch {epoch} with {self.metric_name}: {current_value:.6f}")
-            
+            return True # Model checkpoint saved, it is the best
+        return False    # Model checkpoint not saved
+
+    def get_best_model_performance(self):
+        """
+        Get the best model performance.
+
+        Returns
+        -------
+        dict
+            Dictionary of the best epoch, loss, and metrics.
+        """
+        return {
+            "epoch": self.best_epoch,
+            "loss": self.best_loss,
+            "metrics": self.best_metrics
+        }   
 class EarlyStopping:
     """
     Early stopping to stop the training when the loss does not improve after

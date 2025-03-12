@@ -1,4 +1,5 @@
 import os
+import shutil
 import argparse
 import torch
 
@@ -9,8 +10,9 @@ from src.utils.config import load_config
 from src.models import UNet, CustomDeepLabV3
 from src.losses import MulticlassDiceLoss, CombinedLoss
 from src.data.dataset import PancreasDataset
-from src.training.trainer import Trainer
+from src.training.trainer import Trainer, _SUMMARY
 from src.utils.logger import Logger
+from src.utils.notifier import Notifier
 
 def get_model(config):
     """Initialize model based on configuration."""
@@ -60,6 +62,10 @@ def main():
                         help='Path to configuration file')
     parser.add_argument('--experiment', type=str, required=True,
                         help='Experiment name')
+    parser.add_argument('--notify', action='store_true',
+                        help='Send notification to Telegram')
+    parser.add_argument('--keep', action='store_true',
+                        help='Keep experiment directory if exists')
     args = parser.parse_args()
     
     # Load configuration
@@ -71,7 +77,12 @@ def main():
     print("Description:", config['description'])
     
     # Set up experiment directory
+    print("📂 Setting up experiment directory...")
     experiment_dir = Path(f"experiments/{args.experiment}")
+    # Clear experiment directory if exists
+    if experiment_dir.exists() and not args.keep:
+        shutil.rmtree(experiment_dir)
+        print(f"\tClearing previous data...")
     experiment_dir.mkdir(parents=True, exist_ok=True)
     
     # Initialize logger
@@ -130,10 +141,31 @@ def main():
         experiment_dir=experiment_dir,
         logger=logger
     )
+
+    # Update summary for notifier
+    _SUMMARY.update({
+        'experiment': args.experiment,
+        'description': config['description'],
+        'model_type': config['model']['type'],
+        'epochs': config['training']['num_epochs'],
+        'batch_size': config['data']['batch_size'],
+        'learning_rate': config['training']['learning_rate'],
+        'optimizer': 'AdamW',
+        'loss_function': config['training']['loss_function']
+    })
+
+    # Notify training start if enabled
+    if args.notify:
+        notifier = Notifier()
+        notifier.send_start_message(_SUMMARY)
     
     # Train model
     print("📉 Training model...")
     trainer.train()
+
+    # Notify training end if enabled
+    if args.notify:
+        notifier.send_end_message(_SUMMARY)
 
 
 if __name__ == '__main__':

@@ -1,0 +1,25 @@
+name: "experiment_001"  # Name of the experiment
+description: "Baseline experiment"  # Description of the experiment
+
+data:
+  root_dir: "data"  # Root directory of the dataset
+  raw_dir: "raw"  # Directory containing the raw data
+  split_path: "splits/one.json"
+  num_classes: 5  # Background, Pancreas, Tumor, Arteries, Veins
+  input_size: [16, 16]  # Images size
+  num_workers: 2  # Number of workers to use in the DataLoader
+  batch_size: 4  # Number of samples in each batch
+
+model:
+  type: unet
+  in_channels: 1
+  out_channels: 5
+  init_features: 32
+
+training:
+  num_epochs: 2
+  learning_rate: 0.0001
+  weight_decay: 0.00001
+  loss_function:  "MulticlassDiceLoss"
+  device: "cpu"
+  patience: 5

@@ -8,6 +8,8 @@ from src.utils.logger import Logger
 from src.training.callbacks import ModelCheckpoint, EarlyStopping
 from src.metrics.segmentation import SegmentationMetrics
 
+_SUMMARY = {}
+
 class Trainer:
     def __init__(self, model, loss_fn, optimizer, train_loader, val_loader,
                  config, experiment_dir, logger=None):
@@ -69,7 +71,7 @@ class Trainer:
                 json.dump({"train": [], "val": []}, f, indent=4)
 
     def _save_metrics(self, epoch, train_loss, val_loss, train_metrics, 
-                      val_metrics):
+                      val_metrics, is_best=False):
         """
         Save the metrics to the metrics file.
 
@@ -85,6 +87,9 @@ class Trainer:
             Training metrics.
         val_metrics : dict
             Validation metrics.
+        is_best : bool, optional
+            Whether the model is the best model. If True, save the metrics
+            with the key "best" too.
         """
         with open(self.metrics_file, "r") as f:
             metrics_data = json.load(f)
@@ -100,6 +105,13 @@ class Trainer:
             "loss": val_loss,
             **val_metrics
         })
+
+        if is_best:
+            metrics_data["best"] = {
+                "epoch": epoch,
+                "loss": val_loss,
+                **val_metrics
+            }
 
         with open(self.metrics_file, "w") as f:
             json.dump(metrics_data, f, indent=4)
@@ -154,7 +166,7 @@ class Trainer:
             if self.logger:
                 self.logger.log(
                     {"train_loss": loss.item(), **batch_metrics},
-                    step=epoch
+                    step=epoch+1
                 )
 
             train_loop.set_postfix(
@@ -219,7 +231,7 @@ class Trainer:
                 if self.logger:
                     self.logger.log(
                         {"valid_loss": loss.item(), **batch_metrics},
-                        step=epoch
+                        step=epoch+1
                     )
 
                 val_loop.set_postfix(loss=loss.item())
@@ -238,35 +250,34 @@ class Trainer:
         loop = tqdm(range(self.num_epochs), colour="red")
         loop.set_description(f"Epoch [0/{self.num_epochs}]")
         loop.set_postfix(train_loss="N/A", valid_loss="N/A",train_dice="N/A", valid_dice="N/A")
-        # loop.set_postfix(valid_loss="N/A")
+
         start_time = time.time()
         for epoch in loop:
             train_loss, train_metrics = self.train_step(epoch)
             val_loss, val_metrics = self.val_step(epoch)
 
-            # Save the metrics
-            self._save_metrics(epoch, train_loss, val_loss, train_metrics,
-                               val_metrics)
-
-            # Save the model checkpoint
-            self.checkpoint_callback(
+            # Save the model checkpoint if it is the best
+            is_best = self.checkpoint_callback(
                 self.model,
                 self.optimizer,
-                epoch,
+                epoch+1,
                 val_loss,
                 val_metrics
             )
 
+            # Save the metrics. If it is the best model, save the metrics
+            # with the key "best" too
+            self._save_metrics(epoch, train_loss, val_loss, train_metrics,
+                               val_metrics, is_best=is_best)
+
             # Early stopping
             if self.early_stopping(val_loss):
-                tqdm.write(f"Early stopping at epoch {epoch}")
+                tqdm.write(f"Early stopping at epoch {epoch+1}")
+                _SUMMARY["completed_epochs"] = epoch + 1
                 break
 
             # Update progress bar
             loop.set_description(f"Epoch [{epoch+1}/{self.num_epochs}]")
-            # loop.set_postfix(
-            #     valid_loss=val_loss
-            # )
             loop.set_postfix(
                 train_loss=f"{train_loss:.4f}",
                 valid_loss=f"{val_loss:.4f}",
@@ -278,3 +289,10 @@ class Trainer:
         hours, rem = divmod(total_time, 3600)
         minutes, seconds = divmod(rem, 60)
         tqdm.write(f"Training completed in {int(hours):0>2}:{int(minutes):0>2}:{seconds:05.2f}")
+        # Update summary for notifier
+        _SUMMARY.update({
+            "val_loss": val_loss,
+            "metrics": val_metrics,
+            "best_model": self.checkpoint_callback.get_best_model_performance(),
+            "training_time": total_time
+        })
