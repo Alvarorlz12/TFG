@@ -122,6 +122,10 @@ def main():
     
     # Initialize model
     model = get_model(config)
+    # Check if GPU is available and if multiple GPUs are available
+    if torch.cuda.is_available():
+        if torch.cuda.device_count() > 1:
+            model = torch.nn.DataParallel(model)
     
     # Initialize loss function
     loss_fn = get_loss_fn(config)

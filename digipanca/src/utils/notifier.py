@@ -22,8 +22,8 @@ class Notifier:
     def _generate_progress_bar(self, current_epoch, total_epochs, length=10):
         """Generates a sleek ASCII progress bar using ▰ and ▱."""
         progress = int((current_epoch / total_epochs) * length)
-        filled = "▰" * progress
-        empty = "▱" * (length - progress)
+        filled = "█" * progress
+        empty = "░" * (length - progress)
         percent = (current_epoch / total_epochs) * 100
         return f"{filled}{empty} {percent:.0f}%"
 
@@ -63,18 +63,10 @@ class Notifier:
         message = (
             f"📢 *TRAINING UPDATE* 📢\n"
             f"📌 *Experiment:* `{self.experiment}`\n"
-            f"📊 *Progress:* {progress_bar} \\[`{current_epoch}/{total_epochs}`\\]\n\n"
+            f"📊 {progress_bar} \\[`{current_epoch}/{total_epochs}`\\]\n\n"
             f"📉 *Loss:* `{train_loss:.4f}` \\(Train\\) \\| `{val_loss:.4f}` \\(Val\\)\n"
             f"🎯 *Dice Score:* `{train_dice:.4f}` \\(Train\\) \\| `{val_dice:.4f}` \\(Val\\)\n"
         )
-        # message = (
-        #     f"📢 *TRAINING PROGRESS UPDATE* 📢\n"
-        #     f"📌 *Experiment:* `{self.experiment}`\n\n"
-        #     f"{progress_bar}\n"
-        #     f"📅 *Epoch:* `{current_epoch}/{total_epochs}`\n"
-        #     f"📉 *Loss:* `{train_loss:.4f}` \\(Train\\) \\| `{val_loss:.4f}` \\(Val\\)\n"
-        #     f"📊 *Dice Score:* `{train_dice:.4f}` \\(Train\\) \\| `{val_dice:.4f}` \\(Val\\)\n"
-        # )
 
         self.send_message(message)
 
@@ -83,7 +75,7 @@ class Notifier:
         """Send a message to Telegram when training ends."""
         total_epochs = summary["epochs"]
         completed_epochs = summary.get("completed_epochs", total_epochs)
-        early_stopping = "(EARLY STOPPED)" if completed_epochs < total_epochs else ""
+        early_stopping = f"\\(EARLY STOPPED\\)" if completed_epochs < total_epochs else ""
 
         total_time = summary["training_time"]
         hours, rem = divmod(total_time, 3600)
