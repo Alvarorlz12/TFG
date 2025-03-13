@@ -12,7 +12,7 @@ _SUMMARY = {}
 
 class Trainer:
     def __init__(self, model, loss_fn, optimizer, train_loader, val_loader,
-                 config, experiment_dir, logger=None):
+                 config, experiment_dir, logger=None, notifier=None):
         """
         Initialize the trainer with the model, loss function, optimizer, 
         data loaders, and configuration.
@@ -35,6 +35,8 @@ class Trainer:
             Directory of the experiment, used for saving checkpoints.
         logger : Logger, optional
             Logger for logging the training metrics.
+        notifier : Notifier, optional
+            Notifier for sending messages to Telegram.
         """
         self.device = torch.device(config["device"] if torch.cuda.is_available() else "cpu")
         self.model = model.to(self.device)
@@ -47,6 +49,7 @@ class Trainer:
         self.metrics_dir = os.path.join(experiment_dir, "metrics")
         self.logger = logger
         self.metrics = SegmentationMetrics()
+        self.notifier = notifier
 
         # Callbacks
         self.checkpoint_callback = ModelCheckpoint(
@@ -252,38 +255,54 @@ class Trainer:
         loop.set_postfix(train_loss="N/A", valid_loss="N/A",train_dice="N/A", valid_dice="N/A")
 
         start_time = time.time()
-        for epoch in loop:
-            train_loss, train_metrics = self.train_step(epoch)
-            val_loss, val_metrics = self.val_step(epoch)
+        try:
+            for epoch in loop:
+                train_loss, train_metrics = self.train_step(epoch)
+                val_loss, val_metrics = self.val_step(epoch)
 
-            # Save the model checkpoint if it is the best
-            is_best = self.checkpoint_callback(
-                self.model,
-                self.optimizer,
-                epoch+1,
-                val_loss,
-                val_metrics
-            )
+                if self.notifier and (epoch + 1) % max(1, self.num_epochs // 10) == 0:
+                    self.notifier.send_progress_message(
+                        current_epoch=epoch + 1,
+                        total_epochs=self.num_epochs,
+                        train_loss=train_loss,
+                        val_loss=val_loss,
+                        train_dice=train_metrics.get('dice', 0),
+                        val_dice=val_metrics.get('dice', 0)
+                    )
 
-            # Save the metrics. If it is the best model, save the metrics
-            # with the key "best" too
-            self._save_metrics(epoch, train_loss, val_loss, train_metrics,
-                               val_metrics, is_best=is_best)
+                # Save the model checkpoint if it is the best
+                is_best = self.checkpoint_callback(
+                    self.model,
+                    self.optimizer,
+                    epoch+1,
+                    val_loss,
+                    val_metrics
+                )
 
-            # Early stopping
-            if self.early_stopping(val_loss):
-                tqdm.write(f"Early stopping at epoch {epoch+1}")
-                _SUMMARY["completed_epochs"] = epoch + 1
-                break
+                # Save the metrics. If it is the best model, save the metrics
+                # with the key "best" too
+                self._save_metrics(epoch, train_loss, val_loss, train_metrics,
+                                val_metrics, is_best=is_best)
 
-            # Update progress bar
-            loop.set_description(f"Epoch [{epoch+1}/{self.num_epochs}]")
-            loop.set_postfix(
-                train_loss=f"{train_loss:.4f}",
-                valid_loss=f"{val_loss:.4f}",
-                train_dice=f"{train_metrics.get('dice', 0):.4f}",
-                valid_dice=f"{val_metrics.get('dice', 0):.4f}"
-            )
+                # Early stopping
+                if self.early_stopping(val_loss):
+                    tqdm.write(f"Early stopping at epoch {epoch+1}")
+                    _SUMMARY["completed_epochs"] = epoch + 1
+                    break
+
+                # Update progress bar
+                loop.set_description(f"Epoch [{epoch+1}/{self.num_epochs}]")
+                loop.set_postfix(
+                    train_loss=f"{train_loss:.4f}",
+                    valid_loss=f"{val_loss:.4f}",
+                    train_dice=f"{train_metrics.get('dice', 0):.4f}",
+                    valid_dice=f"{val_metrics.get('dice', 0):.4f}"
+                )
+        except Exception as e:
+            tqdm.write(f"An error occurred during training: {str(e)}")
+            if self.notifier is not None:
+                self.notifier.send_error_message(str(e), epoch+1)
+            raise e
 
         total_time = time.time() - start_time
         hours, rem = divmod(total_time, 3600)

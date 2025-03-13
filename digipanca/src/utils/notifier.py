@@ -4,7 +4,7 @@ from datetime import datetime
 
 class Notifier:
     """Telegram notifier."""
-    def __init__(self):
+    def __init__(self, experiment):
         self.token = os.getenv("TELEGRAM_TOKEN")
         self.chat_id = os.getenv("TELEGRAM_CHAT_ID")
 
@@ -12,6 +12,20 @@ class Notifier:
             raise ValueError("Telegram token or chat ID not provided")
 
         self.url = f"https://api.telegram.org/bot{self.token}/sendMessage"
+        self.experiment = experiment
+
+    def _escape_markdown(self, text):
+        """Escapes special characters for Telegram MarkdownV2."""
+        escape_chars = "_*[]()~`>#+-=|{}.!\\"
+        return "".join(f"\\{char}" if char in escape_chars else char for char in text)
+
+    def _generate_progress_bar(self, current_epoch, total_epochs, length=10):
+        """Generates a sleek ASCII progress bar using ▰ and ▱."""
+        progress = int((current_epoch / total_epochs) * length)
+        filled = "▰" * progress
+        empty = "▱" * (length - progress)
+        percent = (current_epoch / total_epochs) * 100
+        return f"{filled}{empty} {percent:.0f}%"
 
     def send_message(self, message):
         payload = {
@@ -19,7 +33,10 @@ class Notifier:
             "text": message,
             "parse_mode": "MarkdownV2"
         }
-        requests.post(self.url, json=payload)
+        # requests.post(self.url, json=payload)
+        response = requests.post(self.url, json=payload)
+        if response.status_code != 200:
+            print(f"Error sending message: {response.text}")
 
     def send_start_message(self, summary):
         """Send a message to Telegram when training starts."""
@@ -37,6 +54,30 @@ class Notifier:
             f"📅 *Start Time:* `{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}`\n"
         )
         self.send_message(message)
+
+    def send_progress_message(self, current_epoch, total_epochs, train_loss, 
+                              val_loss, train_dice, val_dice):
+        """Sends a progress update message to Telegram."""
+        progress_bar = self._generate_progress_bar(current_epoch, total_epochs)
+
+        message = (
+            f"📢 *TRAINING UPDATE* 📢\n"
+            f"📌 *Experiment:* `{self.experiment}`\n"
+            f"📊 *Progress:* {progress_bar} \\[`{current_epoch}/{total_epochs}`\\]\n\n"
+            f"📉 *Loss:* `{train_loss:.4f}` \\(Train\\) \\| `{val_loss:.4f}` \\(Val\\)\n"
+            f"🎯 *Dice Score:* `{train_dice:.4f}` \\(Train\\) \\| `{val_dice:.4f}` \\(Val\\)\n"
+        )
+        # message = (
+        #     f"📢 *TRAINING PROGRESS UPDATE* 📢\n"
+        #     f"📌 *Experiment:* `{self.experiment}`\n\n"
+        #     f"{progress_bar}\n"
+        #     f"📅 *Epoch:* `{current_epoch}/{total_epochs}`\n"
+        #     f"📉 *Loss:* `{train_loss:.4f}` \\(Train\\) \\| `{val_loss:.4f}` \\(Val\\)\n"
+        #     f"📊 *Dice Score:* `{train_dice:.4f}` \\(Train\\) \\| `{val_dice:.4f}` \\(Val\\)\n"
+        # )
+
+        self.send_message(message)
+
 
     def send_end_message(self, summary):
         """Send a message to Telegram when training ends."""
@@ -67,4 +108,14 @@ class Notifier:
             f"      🔸 *Recall:* `{summary['best_model']['metrics'].get('recall', 'N/A'):.4f}`\n"
             f"🏁 *Epochs Completed:* `{completed_epochs}/{total_epochs}`\n"
         )
+        self.send_message(message)
+
+    def send_error_message(self, error_msg, epoch=None):
+        """Send an error message to Telegram."""
+        error_header = f"❌ *TRAINING ERROR* ❌\n📌 *Experiment:* `{self.experiment}`\n"
+        if epoch is not None:
+            message = f"{error_header}\n⚠️ *Error at epoch* `{epoch}`:\n{self._escape_markdown(error_msg)}"
+        else:
+            message = f"{error_header}\n⚠️ {self._escape_markdown(error_msg)}"
+        
         self.send_message(message)

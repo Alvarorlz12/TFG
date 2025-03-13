@@ -67,6 +67,9 @@ def main():
     parser.add_argument('--keep', action='store_true',
                         help='Keep experiment directory if exists')
     args = parser.parse_args()
+
+    # Initialize notifier only if enabled
+    notifier = Notifier(args.experiment) if args.notify else None
     
     # Load configuration
     config = load_config(args.config)
@@ -139,7 +142,8 @@ def main():
         val_loader=val_loader,
         config=config['training'],
         experiment_dir=experiment_dir,
-        logger=logger
+        logger=logger,
+        notifier=notifier
     )
 
     # Update summary for notifier
@@ -156,7 +160,6 @@ def main():
 
     # Notify training start if enabled
     if args.notify:
-        notifier = Notifier()
         notifier.send_start_message(_SUMMARY)
     
     # Train model
