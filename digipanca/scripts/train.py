@@ -5,6 +5,9 @@ import torch
 
 from pathlib import Path
 from torch.utils.data import DataLoader
+from monai.networks.nets import UNet as MONAIUNet
+from monai.losses import DiceLoss as MONAIDiceLoss
+from monai.networks.layers import Norm
 
 from src.utils.config import load_config
 from src.models import UNet, CustomDeepLabV3
@@ -19,11 +22,24 @@ def get_model(config):
     model_type = config['model']['type']
     
     if model_type == 'unet':
-        return UNet(
-            in_channels=config['model']['in_channels'],
-            out_channels=config['model']['out_channels'],
-            init_features=config['model']['init_features']
-        )
+        if config['model'].get('use_monai', False):
+            # Using MONAI UNet
+            return MONAIUNet(
+                spatial_dims=2,  # 2D images
+                in_channels=config['model']['in_channels'],
+                out_channels=config['model']['out_channels'],
+                channels=config['model'].get('channels', [16, 32, 64, 128, 256]),
+                strides=config['model'].get('strides', [2, 2, 2, 2]),
+                num_res_units=config['model'].get('num_res_units', 2),
+                dropout=config['model'].get('dropout_rate', 0.0),
+                norm=Norm.BATCH
+            )
+        else:
+            return UNet(
+                in_channels=config['model']['in_channels'],
+                out_channels=config['model']['out_channels'],
+                init_features=config['model']['init_features']
+            )
     elif model_type == 'deeplabv3':
         return CustomDeepLabV3(
             num_classes=config['model']['num_classes'],
@@ -38,7 +54,16 @@ def get_loss_fn(config):
     loss_type = config['training']['loss_function']
 
     if loss_type == 'MulticlassDiceLoss':
-        return MulticlassDiceLoss()
+        if config['training'].get('use_monai_loss', False):
+            # MONAI DiceLoss
+            return MONAIDiceLoss(
+                to_onehot_y=True,  # Convert input y to one-hot format
+                softmax=True,  # Apply softmax function to the input y
+                include_background=config['training'].get('include_background', True),
+                reduction=config['training'].get('reduction', 'mean')
+            )
+        else:
+            return MulticlassDiceLoss()
     elif loss_type == 'CombinedLoss':
         weights = config['training']['loss_params'].get('weights', None)
         if weights is not None:
@@ -150,12 +175,14 @@ def main():
     _SUMMARY.update({
         'experiment': args.experiment,
         'description': config['description'],
-        'model_type': config['model']['type'],
+        'model_type': config['model']['type'] + 
+            (' \\(MONAI\\)' if config['model'].get('use_monai', False) else ''),
         'epochs': config['training']['num_epochs'],
         'batch_size': config['data']['batch_size'],
         'learning_rate': config['training']['learning_rate'],
         'optimizer': 'AdamW',
-        'loss_function': config['training']['loss_function']
+        'loss_function': config['training']['loss_function'] +
+        (' \\(MONAI\\)' if config['training'].get('use_monai_loss', False) else '')
     })
 
     # Notify training start if enabled

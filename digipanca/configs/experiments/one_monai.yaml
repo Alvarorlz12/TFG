@@ -1,0 +1,29 @@
+name: "one_monai"
+description: "Fast test experiment with UNet (MONAI)"
+
+data:
+  root_dir: "data"  # Root directory of the dataset
+  raw_dir: "raw"  # Directory containing the raw data
+  split_path: "splits/one.json"
+  num_classes: 5  # Background, Pancreas, Tumor, Arteries, Veins
+  input_size: [16, 16]  # Images size
+  num_workers: 2  # Number of workers to use in the DataLoader
+  batch_size: 8  # Number of samples in each batch
+
+model:
+  type: unet
+  use_monai: True
+  in_channels: 1
+  out_channels: 5
+  dropout_rate: 0.1
+
+training:
+  num_epochs: 2
+  learning_rate: 0.0001
+  weight_decay: 0.00001
+  loss_function:  "MulticlassDiceLoss"
+  use_monai: True
+  include_background: False
+  reduction: "mean"
+  device: "cpu"
+  patience: 10
