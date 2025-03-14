@@ -22,8 +22,9 @@ training:
   learning_rate: 0.0001
   weight_decay: 0.00001
   loss_function:  "MulticlassDiceLoss"
-  use_monai: True
-  include_background: False
-  reduction: "mean"
+  use_monai_loss: False
+  loss_params:
+    alpha: 0.0
+    beta: 1.0
   device: "cpu"
   patience: 10

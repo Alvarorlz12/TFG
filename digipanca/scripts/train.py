@@ -55,12 +55,13 @@ def get_loss_fn(config):
 
     if loss_type == 'MulticlassDiceLoss':
         if config['training'].get('use_monai_loss', False):
+            monai_config = config['training']['loss_params']
             # MONAI DiceLoss
             return MONAIDiceLoss(
-                to_onehot_y=True,  # Convert input y to one-hot format
-                softmax=True,  # Apply softmax function to the input y
-                include_background=config['training'].get('include_background', True),
-                reduction=config['training'].get('reduction', 'mean')
+                to_onehot_y=monai_config.get('to_onehot_y', False),
+                softmax=monai_config.get('softmax', False),
+                include_background=monai_config.get('include_background', False),
+                reduction=monai_config.get('reduction', 'mean'),
             )
         else:
             return MulticlassDiceLoss()
