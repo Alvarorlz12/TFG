@@ -42,7 +42,7 @@ class ModelCheckpoint:
         else:
             current_value = metrics.get(self.metric_name, None)
         if current_value is None:
-            return
+            return False
         
         if (self.mode == "min" and current_value < self.best_metric) or \
            (self.mode == "max" and current_value > self.best_metric):

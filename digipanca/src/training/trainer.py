@@ -281,7 +281,7 @@ class Trainer:
 
                 # Save the metrics. If it is the best model, save the metrics
                 # with the key "best" too
-                self._save_metrics(epoch, train_loss, val_loss, train_metrics,
+                self._save_metrics(epoch+1, train_loss, val_loss, train_metrics,
                                 val_metrics, is_best=is_best)
 
                 # Early stopping

@@ -1,13 +1,14 @@
 import os
 import torch
-import cv2
 import numpy as np
 import nibabel as nib
 
 from torch.utils.data import Dataset
 from collections import defaultdict
+from nibabel.orientations import apply_orientation
 
 from src.data.split_data import load_train_test_split
+from src.data.transforms import Orientation
 
 # Dataset class
 class PancreasDataset(Dataset):
@@ -40,6 +41,7 @@ class PancreasDataset(Dataset):
         self.sample_dirs = sample_dirs
         self.transform = transform
         self.augment = augment
+        self.reorient = Orientation(target_orientation=('R', 'P', 'S'))
         self.slices = defaultdict(list)
 
         # Load the train-test split if specified
@@ -63,8 +65,8 @@ class PancreasDataset(Dataset):
 
             for i in range(image.shape[2]): # i is the slice index
                 # Rotate for correct visualization
-                img_slice = np.fliplr(np.rot90(image[:, :, i], k=-1))
-                masks_slice = np.fliplr(np.rot90(masks[:, :, i], k=-1))
+                img_slice = np.rot90(image[:, :, i], k=-1)
+                masks_slice = np.rot90(masks[:, :, i], k=-1)
 
                 self.slices[patient_id].append((img_slice, masks_slice))
 
@@ -88,12 +90,28 @@ class PancreasDataset(Dataset):
 
         # Apply augmentations
         if self.augment is not None:
+            # Augmentations require NumPy arrays
+            if isinstance(img, torch.Tensor):
+                img = img.numpy().squeeze(0)
+            if isinstance(mask, torch.Tensor):
+                mask = mask.numpy()
+
             img, mask = self.augment(img, mask)
+
+            # Ensure img and mask are tensors
+            if not isinstance(img, torch.Tensor):
+                img = torch.tensor(img, dtype=torch.float32)
+            else:
+                img = img.clone().detach().to(dtype=torch.float32)
+
+            if not isinstance(mask, torch.Tensor):
+                mask = torch.tensor(mask, dtype=torch.long)
+            else:
+                mask = mask.clone().detach().to(dtype=torch.long)
 
         return img, mask, pid
     
-    @staticmethod
-    def _load_nifti_slices(sample_dir):
+    def _load_nifti_slices(self, sample_dir):
         """
         Load the NIfTI files for a given patient and create a segmentation mask.
         The segmentation mask is created by combining the masks for pancreas, 
@@ -122,7 +140,7 @@ class PancreasDataset(Dataset):
             "veins": os.path.join(sample_dir, "SEG", f"Venas-{patient_id}.nii"),
         }
 
-        image = nib.load(image_path).get_fdata()
+        image, transform = self.reorient(nib.load(image_path)) # Reorient the image
         num_slices = image.shape[2]
         masks = np.zeros_like(image)
 
@@ -133,6 +151,8 @@ class PancreasDataset(Dataset):
             mask_data = mask_data[:, :, :num_slices]
             # Binarize the mask
             mask_data = (mask_data > 0).astype(np.uint8)
+            # Apply orientation transformation
+            mask_data = apply_orientation(mask_data, transform)
             # Class label assignment: 1 for pancreas, 2 for tumor...
             masks[mask_data > 0] = i
 

@@ -29,6 +29,7 @@ dependencies = [
     "jupyter>=1.0.0",
     "opencv-python>=4.10.0",
     "monai>=0.8.0",
+    "albumentations>=1.0.0",
 ]
 
 [tool.setuptools]

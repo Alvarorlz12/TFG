@@ -1,6 +1,8 @@
 import cv2
 import torch
 
+from nibabel.orientations import axcodes2ornt, io_orientation, ornt_transform, apply_orientation
+
 from src.data.preprocessing import apply_window, normalize
 
 class ApplyWindow:
@@ -41,6 +43,18 @@ class Resize:
             cv2.resize(mask, self.size, interpolation=cv2.INTER_NEAREST)
         )
     
+class Orientation:
+    """Orient the image to a specified orientation."""
+    def __init__(self, target_orientation=('R', 'A', 'S')):
+        self.target_orientation = axcodes2ornt(target_orientation)
+
+    def __call__(self, image_nifti):
+        current_orientation = io_orientation(image_nifti.affine)
+        transform = ornt_transform(current_orientation, self.target_orientation)
+        image = apply_orientation(image_nifti.get_fdata(), transform)
+        return image, transform
+
+    
 class ToTensor:
     """Convert NumPy arrays to PyTorch tensors."""
     def __call__(self, image, mask):
@@ -63,7 +77,7 @@ class Compose:
 standard_transforms = Compose([
     ApplyWindow(window_level=50, window_width=400),
     Normalize(),
-    CropBorders(crop_size=100),
+    CropBorders(crop_size=120),
     Resize(size=(512, 512)),
     ToTensor()
 ])

@@ -96,6 +96,8 @@ class Notifier:
             f"   🔹 *Best Metrics:*\n"
             f"      🔸 *IoU Score:* `{summary['best_model']['metrics'].get('iou', 'N/A'):.4f}`\n"
             f"      🔸 *Dice Coefficient:* `{summary['best_model']['metrics'].get('dice', 'N/A'):.4f}`\n"
+            f"          🟢 *Pancreas:* `{summary['best_model']['metrics'].get('dice_class_1', 'N/A'):.4f}`\n"
+            f"          🟣 *Tumor:* `{summary['best_model']['metrics'].get('dice_class_2', 'N/A'):.4f}`\n"
             f"      🔸 *Precision:* `{summary['best_model']['metrics'].get('precision', 'N/A'):.4f}`\n"
             f"      🔸 *Recall:* `{summary['best_model']['metrics'].get('recall', 'N/A'):.4f}`\n"
             f"🏁 *Epochs Completed:* `{completed_epochs}/{total_epochs}`\n"
