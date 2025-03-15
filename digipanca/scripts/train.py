@@ -9,6 +9,7 @@ from monai.networks.nets import UNet as MONAIUNet
 from monai.losses import DiceLoss as MONAIDiceLoss
 from monai.networks.layers import Norm
 
+from src.data.transforms import standard_transforms
 from src.utils.config import load_config
 from src.models import UNet, CustomDeepLabV3
 from src.losses import MulticlassDiceLoss, CombinedLoss
@@ -123,13 +124,13 @@ def main():
         sample_dirs=sample_dirs,
         split_path=config['data']['split_path'],
         split_type='train',
-        resize=tuple(config['data']['input_size'])
+        transform=standard_transforms
     )
     val_dataset = PancreasDataset(
         sample_dirs=sample_dirs,
         split_path=config['data']['split_path'],
         split_type='val',
-        resize=tuple(config['data']['input_size'])
+        transform=standard_transforms
     )
     
     train_loader = DataLoader(

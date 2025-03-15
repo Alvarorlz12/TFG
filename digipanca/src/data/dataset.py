@@ -15,8 +15,8 @@ class PancreasDataset(Dataset):
                  sample_dirs,
                  split_path="data/splits/train_test_split.json",
                  split_type="train",
-                 resize=(512,512),
-                 augment=False
+                 transform=None,
+                 augment=None
     ):
         """
         Initialize the Pancreas dataset. The dataset is loaded from the
@@ -27,16 +27,18 @@ class PancreasDataset(Dataset):
         ----------
         sample_dirs : list
             List of directories containing the samples.
+        split_path : str
+            Path to the train-test split JSON file.
         split_type : str
             Type of split to load (train, val, or test). Default is train.
             Use "all" to load all samples.
-        resize : tuple
-            Size to resize the images to.
-        augment : bool
-            Whether to apply augmentations to the images.
+        transform : callable
+            A function/transform to apply to the image and mask.
+        augment : callable
+            A function/transform to apply data augmentation.
         """
         self.sample_dirs = sample_dirs
-        self.resize = resize
+        self.transform = transform
         self.augment = augment
         self.slices = defaultdict(list)
 
@@ -51,8 +53,6 @@ class PancreasDataset(Dataset):
 
         print(f"📊 Loading dataset ({split_type})... {len(self.patient_ids)} patients found.")
 
-        all_min, all_max = [], []
-
         for sample_dir in sample_dirs:
             patient_id = os.path.basename(sample_dir)
             if patient_id not in self.patient_ids:
@@ -60,8 +60,6 @@ class PancreasDataset(Dataset):
 
             # Load NIfTI files and create segmentation mask
             image, masks = self._load_nifti_slices(sample_dir)
-            all_min.append(np.min(image))
-            all_max.append(np.max(image))
 
             for i in range(image.shape[2]): # i is the slice index
                 # Rotate for correct visualization
@@ -76,9 +74,6 @@ class PancreasDataset(Dataset):
             for img, mask in slices
         ]
 
-        self.global_min = np.min(all_min)
-        self.global_max = np.max(all_max)
-
         print(f"📊 Dataset loaded with {len(self.flat_slices)} slices.")
 
     def __len__(self):
@@ -87,23 +82,13 @@ class PancreasDataset(Dataset):
     def __getitem__(self, idx):
         img, mask, pid = self.flat_slices[idx]
 
-        # Normalize images
-        img = (img - self.global_min) / (self.global_max - self.global_min)
-
-        # Resize images
-        if self.resize:
-            img = cv2.resize(img, self.resize, interpolation=cv2.INTER_CUBIC)
-            mask = cv2.resize(mask, self.resize, interpolation=cv2.INTER_NEAREST)
+        # Apply transformations
+        if self.transform is not None:
+            img, mask = self.transform(img, mask)
 
         # Apply augmentations
-        if self.augment:
-            augmented = self.augmentations(image=img, mask=mask)
-            img = augmented['image']
-            mask = augmented['mask']
-
-        # Convert to tensors
-        img = torch.FloatTensor(img).unsqueeze(0)
-        mask = torch.LongTensor(mask)
+        if self.augment is not None:
+            img, mask = self.augment(img, mask)
 
         return img, mask, pid
     
