@@ -1,4 +1,4 @@
-name: "experiment_deep"
+name: "deep_aug"
 description: "DeepLabV3 with transforms and augmentations"
 
 data:
