@@ -32,5 +32,11 @@ dependencies = [
     "albumentations>=1.0.0",
 ]
 
+[project.optional-dependencies]
+notifier = [
+    "gspread>=5.7.0",
+    "oauth2client>=4.0.0",
+]
+
 [tool.setuptools]
 packages = ["src"]

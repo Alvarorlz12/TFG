@@ -37,3 +37,7 @@ experiments/*/*
 env/
 venv/
 ENV/
+
+# Telegram Notifier
+configs/bot_config.json
+configs/credentials.json
