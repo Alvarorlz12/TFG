@@ -3,7 +3,7 @@ import torch
 from tqdm import tqdm
 
 def save_checkpoint(model, optimizer, epoch, loss, checkpoint_dir="checkpoints",
-                    filename="model.pth"):
+                    filename="model.pth", delete_old=True):
     """
     Save the model checkpoint.
 
@@ -21,8 +21,17 @@ def save_checkpoint(model, optimizer, epoch, loss, checkpoint_dir="checkpoints",
         Directory to save the checkpoint.
     filename : str, optional
         Name of the checkpoint file.
+    delete_old : bool, optional
+        Whether to delete old checkpoints before saving the new one.
     """
     os.makedirs(checkpoint_dir, exist_ok=True)
+
+    # Delete old checkpoints if required
+    if delete_old:
+        for file in os.listdir(checkpoint_dir):
+            if file.startswith("best_model_epoch") and file.endswith(".pth"):
+                os.remove(os.path.join(checkpoint_dir, file))
+
     checkpoint_path = os.path.join(checkpoint_dir, filename)
     checkpoint = {
         "model": model.state_dict(),

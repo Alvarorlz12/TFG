@@ -2,12 +2,14 @@ import os
 import shutil
 import argparse
 import torch
+import json
 
 from pathlib import Path
 from torch.utils.data import DataLoader
 from monai.networks.nets import UNet as MONAIUNet
 from monai.losses import DiceLoss as MONAIDiceLoss
 from monai.networks.layers import Norm
+from datetime import datetime
 
 from src.data.transforms import standard_transforms
 from src.data.augmentation import standard_augmentations, Augment
@@ -83,6 +85,7 @@ def get_loss_fn(config):
         raise ValueError(f"Unsupported loss function: {loss_type}")
 
 def main():
+    # Parse command-line arguments
     parser = argparse.ArgumentParser(
         description='Train pancreas segmentation model'
     )
@@ -94,9 +97,11 @@ def main():
                         help='Send notification to Telegram and save results in Google Sheets')
     parser.add_argument('--only_save', action='store_true',
                         help='Only save results in Google Sheets')
-    parser.add_argument('--keep', action='store_true',
-                        help='Keep experiment directory if exists')
     args = parser.parse_args()
+
+    # Start time
+    start_time = datetime.now()
+    timestamp = start_time.strftime("%Y%m%d_%H%M%S")
 
     # Initialize notifier only if enabled (by --notify or --only_save)
     #     --notify and --only_save -> only save results in Google Sheets
@@ -117,12 +122,14 @@ def main():
     
     # Set up experiment directory
     print("📂 Setting up experiment directory...")
-    experiment_dir = Path(f"experiments/{args.experiment}")
+    experiment_root = Path(f"experiments/{args.experiment}")
+    experiment_dir = experiment_root / f"{args.experiment}_{timestamp}"
     # Clear experiment directory if exists
-    if experiment_dir.exists() and not args.keep:
+    if experiment_dir.exists():
         shutil.rmtree(experiment_dir)
         print(f"\tClearing previous data...")
     experiment_dir.mkdir(parents=True, exist_ok=True)
+    print(f"\tExperiment directory: {experiment_dir}")
     
     # Initialize logger
     logger = Logger(log_dir=f"{experiment_dir}/logs", verbosity="INFO")
@@ -187,6 +194,7 @@ def main():
     _SUMMARY.update({
         'experiment': args.experiment,
         'description': config['description'],
+        'start_time': start_time.strftime('%d-%m-%Y %H:%M:%S'),
         'config_file': args.config,
         'model_type': config['model']['type'] + 
             (' \\(MONAI\\)' if config['model'].get('use_monai', False) else ''),
@@ -195,7 +203,8 @@ def main():
         'learning_rate': config['training']['learning_rate'],
         'optimizer': 'AdamW',
         'loss_function': config['training']['loss_function'] +
-        (' \\(MONAI\\)' if config['training'].get('use_monai_loss', False) else '')
+        (' \\(MONAI\\)' if config['training'].get('use_monai_loss', False) else ''),
+        'experiment_dir': str(experiment_dir)
     })
 
     # Notify training start if enabled
@@ -206,6 +215,9 @@ def main():
     print("📉 Training model...")
     trainer.train()
 
+    # End time
+    _SUMMARY['end_time'] = datetime.now().strftime('%d-%m-%Y %H:%M:%S')
+
     # Notify training end if enabled
     if args.notify and not args.only_save:
         notifier.send_end_message(_SUMMARY)
@@ -214,6 +226,9 @@ def main():
     if args.notify or args.only_save:
         notifier.save_results(_SUMMARY)
 
+    # Save _SUMMARY in experiment directory
+    with open(f"{experiment_dir}/summary.json", 'w') as f:
+        json.dump(_SUMMARY, f, indent=4)
 
 if __name__ == '__main__':
     main()

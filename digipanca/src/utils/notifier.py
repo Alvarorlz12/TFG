@@ -137,7 +137,7 @@ class Notifier:
             f"   🔹 *Learning Rate:* `{summary.get('learning_rate', 'N/A')}`\n"
             f"   🔹 *Optimizer:* `{summary.get('optimizer', 'N/A')}`\n"
             f"   🔹 *Loss Function:* `{summary.get('loss_function', 'N/A')}`\n"
-            f"📅 *Start Time:* `{datetime.now().strftime('%d-%m-%Y %H:%M:%S')}`\n"
+            f"📅 *Start Time:* `{summary['start_time']}`\n"
         )
         self.send_message(message)
 
@@ -173,7 +173,7 @@ class Notifier:
         message = (
             f"✅ *TRAINING COMPLETED* ✅ {early_stopping}\n"
             f"📌 *Experiment:* `{summary['experiment']}`\n"
-            f"📅 *End Time:* `{datetime.now().strftime('%d-%m-%Y %H:%M:%S')}`\n"
+            f"📅 *End Time:* `{summary['end_time']}`\n"
             f"⏳ *Duration:* `{int(hours):0>2}:{int(minutes):0>2}:{seconds:05.2f}`\n"
             f"📉 *Final Validation Loss:* `{summary['val_loss']:.4f}`\n"
             f"📊 *Final Metrics:*\n"
@@ -253,6 +253,8 @@ class Notifier:
                 ]
             ],
             str(timedelta(seconds=summary['training_time']))[:-3],
-            datetime.now().strftime('%d-%m-%Y %H:%M:%S')
+            summary['start_time'],
+            summary['end_time'],
+            summary['experiment_dir']
         ]
         self.results_sheet.append_row(row)
