@@ -12,7 +12,9 @@ fi
 EXPERIMENT_NAME=$1
 CONFIG_NAME=${2:-$1}    # Si no se especifica, se utiliza el nombre del experimento
 
+TIMESTAMP=$(date +%Y%m%d-%H%M%S)    # Fecha y hora actual
+
 # Pasar el script modificado directamente a sbatch a través de stdin
 sed -e "s/EXPERIMENT_NAME/${EXPERIMENT_NAME}/g" \
     -e "s/CONFIG_NAME/${CONFIG_NAME}/g" \
-    slurm/scripts/train_template.sh | sbatch
+    slurm/scripts/train_template.sh | sbatch --output=slurm/out/${EXPERIMENT_NAME}_${TIMESTAMP}.out
