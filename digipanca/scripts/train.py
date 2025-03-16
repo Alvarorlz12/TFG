@@ -91,13 +91,21 @@ def main():
     parser.add_argument('--experiment', type=str, required=True,
                         help='Experiment name')
     parser.add_argument('--notify', action='store_true',
-                        help='Send notification to Telegram')
+                        help='Send notification to Telegram and save results in Google Sheets')
+    parser.add_argument('--only_save', action='store_true',
+                        help='Only save results in Google Sheets')
     parser.add_argument('--keep', action='store_true',
                         help='Keep experiment directory if exists')
     args = parser.parse_args()
 
-    # Initialize notifier only if enabled
-    notifier = Notifier(args.experiment) if args.notify else None
+    # Initialize notifier only if enabled (by --notify or --only_save)
+    #     --notify and --only_save -> only save results in Google Sheets
+    #     --notify only -> send notification to Telegram and save results in Google Sheets
+    #     --only_save only -> only save results in Google Sheets (same as --notify --only_save)
+    if args.notify or args.only_save:
+        notifier = Notifier(args.experiment, only_save=args.only_save)
+    else:
+        notifier = None
     
     # Load configuration
     config = load_config(args.config)
@@ -179,6 +187,7 @@ def main():
     _SUMMARY.update({
         'experiment': args.experiment,
         'description': config['description'],
+        'config_file': args.config,
         'model_type': config['model']['type'] + 
             (' \\(MONAI\\)' if config['model'].get('use_monai', False) else ''),
         'epochs': config['training']['num_epochs'],
@@ -190,7 +199,7 @@ def main():
     })
 
     # Notify training start if enabled
-    if args.notify:
+    if args.notify and not args.only_save:
         notifier.send_start_message(_SUMMARY)
     
     # Train model
@@ -198,8 +207,12 @@ def main():
     trainer.train()
 
     # Notify training end if enabled
-    if args.notify:
+    if args.notify and not args.only_save:
         notifier.send_end_message(_SUMMARY)
+
+    # Save results in Google Sheets if enabled
+    if args.notify or args.only_save:
+        notifier.save_results(_SUMMARY)
 
 
 if __name__ == '__main__':

@@ -310,6 +310,8 @@ class Trainer:
         tqdm.write(f"Training completed in {int(hours):0>2}:{int(minutes):0>2}:{seconds:05.2f}")
         # Update summary for notifier
         _SUMMARY.update({
+            "train_loss": train_loss,
+            "train_metrics": train_metrics,
             "val_loss": val_loss,
             "metrics": val_metrics,
             "best_model": self.checkpoint_callback.get_best_model_performance(),
