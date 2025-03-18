@@ -22,6 +22,9 @@ transforms:
   - ToTensor: {}
 
 augmentations:
+  - RandomCrop:
+      height: 256
+      width: 256
   - Affine:
       scale: [0.95, 1.05]
       translate_percent: [0.02, 0.02]

@@ -11,15 +11,26 @@ from monai.losses import DiceLoss as MONAIDiceLoss
 from monai.networks.layers import Norm
 from datetime import datetime
 
-from src.data.transforms import standard_transforms
-from src.data.augmentation import standard_augmentations, Augment
 from src.utils.config import load_config
+from src.data.augmentation import build_augmentations_from_config
+from src.data.transforms import build_transforms_from_config
 from src.models import UNet, CustomDeepLabV3
 from src.losses import MulticlassDiceLoss, CombinedLoss
 from src.data.dataset import PancreasDataset
 from src.training.trainer import Trainer, _SUMMARY
 from src.utils.logger import Logger
 from src.utils.notifier import Notifier
+
+#region AUXILIARY FUNCTIONS
+def get_transform(config):
+    """Initialize transforms based on configuration."""
+    transform_config = config.get('transforms', None)
+    return build_transforms_from_config(transform_config)
+
+def get_augment(config):
+    """Initialize augmentations based on configuration."""
+    augment_config = config.get('augmentations', None)
+    return build_augmentations_from_config(augment_config)
 
 def get_model(config):
     """Initialize model based on configuration."""
@@ -83,7 +94,9 @@ def get_loss_fn(config):
         )
     else:
         raise ValueError(f"Unsupported loss function: {loss_type}")
+#endregion
 
+#region MAIN FUNCTION
 def main():
     # Parse command-line arguments
     parser = argparse.ArgumentParser(
@@ -133,6 +146,10 @@ def main():
     
     # Initialize logger
     logger = Logger(log_dir=f"{experiment_dir}/logs", verbosity="INFO")
+
+    # Load transforms and augmentations
+    transform = get_transform(config)
+    augment = get_augment(config)
     
     # Create dataset and data loaders
     sample_dirs = [os.path.join(RAW_DIR, sd) for sd in os.listdir(RAW_DIR)]
@@ -140,14 +157,14 @@ def main():
         sample_dirs=sample_dirs,
         split_path=config['data']['split_path'],
         split_type='train',
-        transform=standard_transforms,
-        augment=Augment(augmentations=standard_augmentations)
+        transform=transform,
+        augment=augment
     )
     val_dataset = PancreasDataset(
         sample_dirs=sample_dirs,
         split_path=config['data']['split_path'],
         split_type='val',
-        transform=standard_transforms
+        transform=transform
     )
     
     train_loader = DataLoader(
@@ -229,6 +246,7 @@ def main():
     # Save _SUMMARY in experiment directory
     with open(f"{experiment_dir}/summary.json", 'w') as f:
         json.dump(_SUMMARY, f, indent=4)
+#endregion
 
 if __name__ == '__main__':
     main()

@@ -84,6 +84,10 @@ class PancreasDataset(Dataset):
     def __getitem__(self, idx):
         img, mask, pid = self.flat_slices[idx]
 
+        # Prevent negative stride
+        img = img.copy()
+        mask = mask.copy()
+
         # Apply transformations
         if self.transform is not None:
             img, mask = self.transform(img, mask)
@@ -98,16 +102,20 @@ class PancreasDataset(Dataset):
 
             img, mask = self.augment(img, mask)
 
-            # Ensure img and mask are tensors
-            if not isinstance(img, torch.Tensor):
-                img = torch.tensor(img, dtype=torch.float32)
-            else:
-                img = img.clone().detach().to(dtype=torch.float32)
+        # Ensure img and mask are tensors
+        if not isinstance(img, torch.Tensor):
+            img = torch.tensor(img, dtype=torch.float32)
+        else:
+            img = img.clone().detach().to(dtype=torch.float32)
 
-            if not isinstance(mask, torch.Tensor):
-                mask = torch.tensor(mask, dtype=torch.long)
-            else:
-                mask = mask.clone().detach().to(dtype=torch.long)
+        if not isinstance(mask, torch.Tensor):
+            mask = torch.tensor(mask, dtype=torch.long)
+        else:
+            mask = mask.clone().detach().to(dtype=torch.long)
+
+        # Add channel dimension if missing: (H, W) -> (C, H, W)
+        if len(img.shape) == 2:
+            img = img.unsqueeze(0)
 
         return img, mask, pid
     
