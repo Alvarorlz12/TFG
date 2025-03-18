@@ -6,9 +6,50 @@ data:
   raw_dir: "raw"  # Directory containing the raw data
   split_path: "splits/one.json"
   num_classes: 5  # Background, Pancreas, Tumor, Arteries, Veins
-  input_size: [16, 16]  # Images size
+  input_size: [512, 512]  # Images size
   num_workers: 2  # Number of workers to use in the DataLoader
   batch_size: 4  # Number of samples in each batch
+
+# List of transforms to apply to the images (must be a list of dictionaries)
+# To do so, you can use the following syntax:
+# transforms:
+#   - Transform1:
+#       param1: value1
+#       param2: value2
+#   - Transform2: {}  # If the transform does not require parameters (or default values are used)
+transforms:
+  - ApplyWindow:
+      window_level: 50
+      window_width: 400
+  - Normalize: {}
+  - CropBorders:
+      crop_size: 120
+  - Resize:
+      size: [8, 8]
+  - ToTensor: {}
+
+augmentations:
+  - Affine:
+      scale: [0.95, 1.05]
+      translate_percent: [0.02, 0.02]
+      rotate: [-10, 10]
+      p: 0.2
+  - RandomBrightnessContrast:
+      brightness_limit: 0.2
+      contrast_limit: 0.2
+      p: 0.3
+  - GaussianBlur:
+      blur_limit: [3, 7]
+      p: 0.3
+  - ElasticTransform:
+      alpha: 1.0
+      sigma: 50
+      p: 0.3
+  - GridDistortion:
+      num_steps: 5
+      distort_limit: 0.3
+      p: 0.3
+  - ToTensorV2: {}
 
 model:
   type: deeplabv3

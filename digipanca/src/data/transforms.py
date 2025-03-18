@@ -5,6 +5,7 @@ from nibabel.orientations import axcodes2ornt, io_orientation, ornt_transform, a
 
 from src.data.preprocessing import apply_window, normalize
 
+#region TRANSFORMS
 class ApplyWindow:
     """Apply a window to the image."""
     def __init__(self, window_level=50, window_width=400):
@@ -73,6 +74,49 @@ class Compose:
             image, mask = transform(image, mask)
         return image, mask
     
+#region PIPELINES
+    
+# Mapping of transformations to their names
+_TRANSFORMS = {
+    'ApplyWindow': ApplyWindow,
+    'Normalize': Normalize,
+    'CropBorders': CropBorders,
+    'Resize': Resize,
+    'Orientation': Orientation,
+    'ToTensor': ToTensor,
+    'Compose': Compose
+}
+
+def build_transforms_from_config(config):
+    """
+    Build a transforms pipeline from a configuration list of dictionaries.
+
+    Parameters
+    ----------
+    config : List[Dict]
+        The configuration list of dictionaries.
+
+    Returns
+    -------
+    Compose
+        The transforms pipeline.
+    """
+    if config is None:
+        return None
+    
+    transforms_list = []
+    for transform in config:
+        name, params = list(transform.items())[0]  # Get the name and parameters
+        transform_class = _TRANSFORMS.get(name)
+
+        if transform_class:
+            transform_instance = transform_class(**(params or {}))
+            transforms_list.append(transform_instance)
+        else:
+            print(f"⚠️ Unknown transform: {name}")
+
+    return Compose(transforms_list)
+
 # Standard transforms pipeline
 standard_transforms = Compose([
     ApplyWindow(window_level=50, window_width=400),

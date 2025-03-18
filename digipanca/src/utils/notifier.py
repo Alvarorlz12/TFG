@@ -86,7 +86,16 @@ class Notifier:
         }
         response = requests.post(f"{self.url}/createForumTopic", json=payload)
         if response.status_code == 200:
-            return response.json()["result"]["message_thread_id"]
+            topic_id = response.json()["result"]["message_thread_id"]
+
+            # Close the topic
+            payload = {
+                "chat_id": self.chat_id,
+                "message_thread_id": topic_id
+            }
+            requests.post(f"{self.url}/closeForumTopic", json=payload)
+
+            return topic_id
         else:
             print(f"Error creating topic {topic_name}: {response.text}")
             return None
