@@ -140,7 +140,7 @@ class Notifier:
             f"📌 *Experiment:* `{summary['experiment']}`\n"
             f"📝 *Description:* `{summary['description']}`\n"
             f"⚙️ *Configuration:* `{config_file}`\n"
-            f"   🔹 *Model:* `{summary['model_type']}`\n"
+            f"   🔹 *Model:* `{self._escape_markdown(summary['model_type'])}`\n"
             f"   🔹 *Epochs:* `{summary['epochs']}`\n"
             f"   🔹 *Batch Size:* `{summary.get('batch_size', 'N/A')}`\n"
             f"   🔹 *Learning Rate:* `{summary.get('learning_rate', 'N/A')}`\n"

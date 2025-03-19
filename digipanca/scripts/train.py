@@ -214,7 +214,7 @@ def main():
         'start_time': start_time.strftime('%d-%m-%Y %H:%M:%S'),
         'config_file': args.config,
         'model_type': config['model']['type'] + 
-            (' \\(MONAI\\)' if config['model'].get('use_monai', False) else ''),
+            (' (MONAI)' if config['model'].get('use_monai', False) else ''),
         'epochs': config['training']['num_epochs'],
         'batch_size': config['data']['batch_size'],
         'learning_rate': config['training']['learning_rate'],

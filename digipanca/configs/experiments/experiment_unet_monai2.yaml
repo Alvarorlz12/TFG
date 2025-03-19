@@ -1,0 +1,66 @@
+name: "experiment_unet_monai"
+description: "Experiment with UNet (MONAI) and data augmentation"
+
+data:
+  root_dir: "data"  # Root directory of the dataset
+  raw_dir: "raw"  # Directory containing the raw data
+  split_path: "splits/train_test_split.json"
+  num_classes: 5  # Background, Pancreas, Tumor, Arteries, Veins
+  input_size: [512, 512]  # Images size
+  num_workers: 2  # Number of workers to use in the DataLoader
+  batch_size: 4  # Number of samples in each batch
+
+transforms:
+  - ApplyWindow:
+      window_level: 50
+      window_width: 400
+  - Normalize: {}
+  - Resize:
+      size: [512, 512]
+  - ToTensor: {}
+
+augmentations:
+  - RandomCrop:
+      height: 256
+      width: 256
+  - Affine:
+      scale: [0.95, 1.05]
+      translate_percent: [0.02, 0.02]
+      rotate: [-10, 10]
+      p: 0.2
+  - RandomBrightnessContrast:
+      brightness_limit: 0.2
+      contrast_limit: 0.2
+      p: 0.3
+  - GaussianBlur:
+      blur_limit: [3, 7]
+      p: 0.3
+  - ElasticTransform:
+      alpha: 1.0
+      sigma: 50
+      p: 0.3
+  - GridDistortion:
+      num_steps: 5
+      distort_limit: 0.3
+      p: 0.3
+  - ToTensorV2: {}
+
+model:
+  type: unet
+  use_monai: True
+  in_channels: 1
+  out_channels: 5
+  dropout_rate: 0.1
+
+training:
+  num_epochs: 200
+  learning_rate: 0.0001
+  weight_decay: 0.00001
+  loss_function:  "MulticlassDiceLoss"
+  use_monai_loss: False
+  loss_params:
+    alpha: 1.0
+    beta: 1.0
+    weights: [0.3, 1.0, 2.0, 1.0, 1.0]
+  device: "cuda"
+  patience: 25
