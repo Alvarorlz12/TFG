@@ -212,6 +212,9 @@ def main():
         notifier=notifier
     )
 
+    print(f"📊 Memoria reservada por PyTorch antes del entrenamiento: {torch.cuda.memory_reserved() / 1024**3:.2f} GB")
+    print(f"📊 Memoria asignada por PyTorch antes del entrenamiento: {torch.cuda.memory_allocated() / 1024**3:.2f} GB")
+
     # Update summary for notifier
     _SUMMARY.update({
         'experiment': args.experiment,
