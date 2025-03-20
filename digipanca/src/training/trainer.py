@@ -181,9 +181,7 @@ class Trainer:
             # Free up memory
             del images, masks, outputs, loss
             torch.cuda.empty_cache()
-            print(f"📊 Memoria reservada después de liberar caché: {torch.cuda.memory_reserved() / 1024**3:.2f} GB")
-            print(f"📊 Memoria asignada después de liberar caché: {torch.cuda.memory_allocated() / 1024**3:.2f} GB")
-
+            
         train_metrics = {
             k: v / len(self.train_loader) for k, v in all_metrics.items()
         }
