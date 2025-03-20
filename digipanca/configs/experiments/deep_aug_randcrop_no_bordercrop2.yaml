@@ -1,5 +1,5 @@
 name: "deep_aug"
-description: "DeepLabV3 with RandomCrop and no BorderCrop with bs=16"
+description: "DeepLabV3 with RandomCrop and no BorderCrop with bs=8"
 
 data:
   root_dir: "data"  # Root directory of the dataset
@@ -8,7 +8,7 @@ data:
   num_classes: 5  # Background, Pancreas, Tumor, Arteries, Veins
   input_size: [512, 512]  # Images size
   num_workers: 2  # Number of workers to use in the DataLoader
-  batch_size: 16  # Number of samples in each batch
+  batch_size: 8  # Number of samples in each batch
 
 transforms:
   - ApplyWindow:
