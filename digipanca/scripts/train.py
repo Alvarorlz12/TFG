@@ -152,17 +152,16 @@ def main():
     augment = get_augment(config)
     
     # Create dataset and data loaders
-    sample_dirs = [os.path.join(RAW_DIR, sd) for sd in os.listdir(RAW_DIR)]
     train_dataset = PancreasDataset(
-        sample_dirs=sample_dirs,
-        split_path=config['data']['split_path'],
+        data_dir=RAW_DIR,
+        split_file=config['data']['split_path'],
         split_type='train',
         transform=transform,
         augment=augment
     )
     val_dataset = PancreasDataset(
-        sample_dirs=sample_dirs,
-        split_path=config['data']['split_path'],
+        data_dir=RAW_DIR,
+        split_file=config['data']['split_path'],
         split_type='val',
         transform=transform
     )

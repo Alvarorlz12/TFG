@@ -55,7 +55,6 @@ class Orientation:
         image = apply_orientation(image_nifti.get_fdata(), transform)
         return image, transform
 
-    
 class ToTensor:
     """Convert NumPy arrays to PyTorch tensors."""
     def __call__(self, image, mask):

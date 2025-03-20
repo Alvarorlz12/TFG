@@ -10,3 +10,8 @@ data:
   shuffle: true
   num_workers: 4  # Number of workers to use in the DataLoader
   batch_size: 4  # Number of samples in each batch
+
+transforms:
+  - Resize:
+      size: [512, 512]
+  - ToTensor: {}
