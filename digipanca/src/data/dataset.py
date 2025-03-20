@@ -100,14 +100,14 @@ class PancreasDataset(Dataset):
 
         # Ensure image and mask are tensors
         if not isinstance(image, torch.Tensor):
-            image = torch.tensor(image, dtype=torch.float32)
+            image = torch.tensor(image, dtype=torch.float32).cpu()
         else:
-            image = image.clone().detach().to(dtype=torch.float32)
+            image = image.clone().detach().to(dtype=torch.float32).cpu()
 
         if not isinstance(mask, torch.Tensor):
-            mask = torch.tensor(mask, dtype=torch.long)
+            mask = torch.tensor(mask, dtype=torch.long).cpu()
         else:
-            mask = mask.clone().detach().to(dtype=torch.long)
+            mask = mask.clone().detach().to(dtype=torch.long).cpu()
 
         # Add channel dimension if missing: (H, W) -> (C, H, W)
         if len(image.shape) == 2:

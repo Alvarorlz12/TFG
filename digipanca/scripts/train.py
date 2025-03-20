@@ -98,6 +98,8 @@ def get_loss_fn(config):
 
 #region MAIN FUNCTION
 def main():
+    torch.cuda.empty_cache()
+    
     # Parse command-line arguments
     parser = argparse.ArgumentParser(
         description='Train pancreas segmentation model'
@@ -170,14 +172,18 @@ def main():
         train_dataset,
         batch_size=config['data']['batch_size'],
         shuffle=True,
-        num_workers=config['data']['num_workers']
+        num_workers=config['data']['num_workers'],
+        pin_memory=True,
+        persistent_workers=True
     )
     
     val_loader = DataLoader(
         val_dataset,
         batch_size=config['data']['batch_size'],
         shuffle=True,
-        num_workers=config['data']['num_workers']
+        num_workers=config['data']['num_workers'],
+        pin_memory=True,
+        persistent_workers=True
     )
     
     # Initialize model

@@ -177,6 +177,10 @@ class Trainer:
                 dice=f"{batch_metrics.get('dice', 0):.4f}"
             )
 
+            # Free up memory
+            del images, masks, outputs, loss
+            torch.cuda.empty_cache()
+
         train_metrics = {
             k: v / len(self.train_loader) for k, v in all_metrics.items()
         }
@@ -238,6 +242,10 @@ class Trainer:
                     )
 
                 val_loop.set_postfix(loss=loss.item())
+
+                # Free up memory
+                del images, masks, outputs, loss
+                torch.cuda.empty_cache()
 
         val_metrics = {
             k: v / len(self.val_loader) for k, v in all_metrics.items()
