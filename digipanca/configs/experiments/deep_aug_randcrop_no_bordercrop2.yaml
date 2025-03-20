@@ -1,5 +1,5 @@
-name: "experiment_unet_monai"
-description: "Experiment with UNet (MONAI) and data augmentation"
+name: "deep_aug"
+description: "DeepLabV3 with RandomCrop and no BorderCrop with bs=16"
 
 data:
   root_dir: "data"  # Root directory of the dataset
@@ -8,7 +8,7 @@ data:
   num_classes: 5  # Background, Pancreas, Tumor, Arteries, Veins
   input_size: [512, 512]  # Images size
   num_workers: 2  # Number of workers to use in the DataLoader
-  batch_size: 4  # Number of samples in each batch
+  batch_size: 16  # Number of samples in each batch
 
 transforms:
   - ApplyWindow:
@@ -46,21 +46,19 @@ augmentations:
   - ToTensorV2: {}
 
 model:
-  type: unet
-  use_monai: True
-  in_channels: 1
-  out_channels: 5
-  dropout_rate: 0.1
+  type: deeplabv3
+  num_classes: 5
+  dropout_rate: 0.2
+  pretrained: True
 
 training:
-  num_epochs: 200
+  num_epochs: 100
   learning_rate: 0.0001
   weight_decay: 0.00001
-  loss_function:  "MulticlassDiceLoss"
-  use_monai_loss: False
+  loss_function:  "CombinedLoss"
   loss_params:
     alpha: 1.0
     beta: 1.0
     weights: [0.3, 1.0, 2.0, 1.0, 1.0]
   device: "cuda"
-  patience: 25
+  patience: 15
