@@ -9,13 +9,8 @@ from nibabel.orientations import apply_orientation
 from src.data.split_data import load_train_test_split
 from src.data.transforms import Orientation
 
-class PancreasDataset(Dataset):
-    """
-    PyTorch dataset for the Pancreas dataset. This is an optimized version
-    of the `full_dataset.FullPancreasDataset` class that loads the NIfTI files
-    and creates the segmentation masks on-the-fly. This reduces the memory
-    footprint and speeds up the data loading process.
-    """
+class OptimizedPancreasDataset(Dataset):
+    """Optimized version of the Pancreas dataset."""
     def __init__(
         self,
         data_dir,
