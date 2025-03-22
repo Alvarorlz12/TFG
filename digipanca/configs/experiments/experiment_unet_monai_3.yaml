@@ -1,5 +1,5 @@
-name: "deep_aug"
-description: "DeepLabV3 with RandomCrop and no BorderCrop with bs=8"
+name: "experiment_unet_monai"
+description: "Experiment with UNet (MONAI) and data augmentation with bs=8 and Focal Loss"
 
 data:
   root_dir: "data"  # Root directory of the dataset
@@ -46,19 +46,19 @@ augmentations:
   - ToTensorV2: {}
 
 model:
-  type: deeplabv3
-  num_classes: 5
-  dropout_rate: 0.2
-  pretrained: True
+  type: unet
+  use_monai: True
+  in_channels: 1
+  out_channels: 5
+  dropout_rate: 0.1
 
 training:
-  num_epochs: 100
+  num_epochs: 200
   learning_rate: 0.0001
   weight_decay: 0.00001
-  loss_function:  "CombinedLoss"
+  loss_function:  "FocalLoss"
   loss_params:
-    alpha: 1.0
-    beta: 1.0
-    weights: [0.3, 1.0, 2.0, 1.0, 1.0]
+    gamma: 2.0
+    reduction: "mean"
   device: "cuda"
-  patience: 15
+  patience: 25

@@ -15,7 +15,7 @@ from src.utils.config import load_config
 from src.data.augmentation import build_augmentations_from_config
 from src.data.transforms import build_transforms_from_config
 from src.models import UNet, CustomDeepLabV3
-from src.losses import MulticlassDiceLoss, CombinedLoss
+from src.losses import MulticlassDiceLoss, CombinedLoss, FocalLoss
 from src.data.dataset import PancreasDataset
 from src.training.trainer import Trainer, _SUMMARY
 from src.utils.logger import Logger
@@ -91,6 +91,11 @@ def get_loss_fn(config):
             alpha=config['training']['loss_params']['alpha'],
             beta=config['training']['loss_params']['beta'],
             class_weights=weights
+        )
+    elif loss_type == 'FocalLoss':
+        return FocalLoss(
+            gamma=config['training']['loss_params']['gamma'],
+            reduction=config['training']['loss_params']['reduction']
         )
     else:
         raise ValueError(f"Unsupported loss function: {loss_type}")

@@ -1,34 +1,28 @@
-name: "one_deep"
-description: "Fast test experiment with DeepLabV3"  # Description of the experiment
+name: "deep_aug"
+description: "DeepLabV3 with RandomCrop and no BorderCrop with Focal Loss"
 
 data:
   root_dir: "data"  # Root directory of the dataset
   raw_dir: "raw"  # Directory containing the raw data
-  split_path: "splits/one.json"
+  split_path: "splits/train_test_split.json"
   num_classes: 5  # Background, Pancreas, Tumor, Arteries, Veins
   input_size: [512, 512]  # Images size
   num_workers: 2  # Number of workers to use in the DataLoader
   batch_size: 4  # Number of samples in each batch
 
-# List of transforms to apply to the images (must be a list of dictionaries)
-# To do so, you can use the following syntax:
-# transforms:
-#   - Transform1:
-#       param1: value1
-#       param2: value2
-#   - Transform2: {}  # If the transform does not require parameters (or default values are used)
 transforms:
   - ApplyWindow:
       window_level: 50
       window_width: 400
   - Normalize: {}
-  - CropBorders:
-      crop_size: 120
   - Resize:
-      size: [8, 8]
+      size: [512, 512]
   - ToTensor: {}
 
 augmentations:
+  - RandomCrop:
+      height: 256
+      width: 256
   - Affine:
       scale: [0.95, 1.05]
       translate_percent: [0.02, 0.02]
@@ -58,19 +52,12 @@ model:
   pretrained: True
 
 training:
-  num_epochs: 2
+  num_epochs: 100
   learning_rate: 0.0001
   weight_decay: 0.00001
-  # FocalLoss
-  loss_function: "FocalLoss"
+  loss_function:  "FocalLoss"
   loss_params:
     gamma: 2.0
     reduction: "mean"
-  # CombinedLoss
-  # loss_function:  "CombinedLoss"
-  # loss_params:
-  #   alpha: 1.0
-  #   beta: 1.0
-  #   weights: [0.3, 1.0, 2.0, 1.0, 1.0]
-  device: "cpu"
-  patience: 5
+  device: "cuda"
+  patience: 15

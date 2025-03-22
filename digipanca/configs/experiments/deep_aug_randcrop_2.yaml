@@ -1,5 +1,5 @@
 name: "deep_aug"
-description: "DeepLabV3 with transforms and augmentations and bs=8"
+description: "DeepLabV3 with transforms and augmentations and Focal Loss"
 
 data:
   root_dir: "data"  # Root directory of the dataset
@@ -8,7 +8,7 @@ data:
   num_classes: 5  # Background, Pancreas, Tumor, Arteries, Veins
   input_size: [512, 512]  # Images size
   num_workers: 2  # Number of workers to use in the DataLoader
-  batch_size: 8  # Number of samples in each batch
+  batch_size: 4  # Number of samples in each batch
 
 transforms:
   - ApplyWindow:
@@ -57,10 +57,9 @@ training:
   num_epochs: 100
   learning_rate: 0.0001
   weight_decay: 0.00001
-  loss_function:  "CombinedLoss"
+  loss_function:  "FocalLoss"
   loss_params:
-    alpha: 1.0
-    beta: 1.0
-    weights: [0.3, 1.0, 2.0, 1.0, 1.0]
+    gamma: 2.0
+    reduction: "mean"
   device: "cuda"
   patience: 15

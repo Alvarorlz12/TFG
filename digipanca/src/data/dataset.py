@@ -43,6 +43,7 @@ class PancreasDataset(Dataset):
         self.augment = augment
         self.reorient = Orientation(target_orientation=('R', 'P', 'S'))
         self.slices = defaultdict(list)
+        self.accum_slices = defaultdict(int)    # Accumulated number of slices per patient
 
         # Load the train-test split if specified
         if split_type != "all":
@@ -55,6 +56,7 @@ class PancreasDataset(Dataset):
 
         print(f"📊 Loading dataset ({split_type})... {len(self.patient_ids)} patients found.")
 
+        accumulated_slices = 0
         for sample_dir in self.sample_dirs:
             patient_id = os.path.basename(sample_dir)
             if patient_id not in self.patient_ids:
@@ -69,6 +71,9 @@ class PancreasDataset(Dataset):
                 masks_slice = np.rot90(masks[:, :, i], k=-1)
 
                 self.slices[patient_id].append((img_slice, masks_slice))
+
+            self.accum_slices[patient_id] = accumulated_slices
+            accumulated_slices += image.shape[2]
 
         # Flatten slices for indexing
         self.flat_slices = [
@@ -165,3 +170,19 @@ class PancreasDataset(Dataset):
             masks[mask_data > 0] = i
 
         return image, masks
+    
+    def get_initial_slice_idx(self, patient_id):
+        """
+        Get the initial slice index for a given patient.
+
+        Parameters:
+        -----------
+        patient_id : str
+            The patient ID.
+
+        Returns:
+        --------
+        int
+            The initial slice index.
+        """
+        return self.accum_slices[patient_id]
