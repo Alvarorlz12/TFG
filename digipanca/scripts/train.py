@@ -99,7 +99,7 @@ def get_loss_fn(config):
         )
     elif loss_type == 'WeightedDiceLoss':
         return WeightedDiceLoss(
-            num_classes=config['model']['out_channels'],
+            num_classes=config['training']['loss_params']['num_classes'],
             include_background=config['training']['loss_params']['include_background'],
             reduction=config['training']['loss_params']['reduction']
         )
