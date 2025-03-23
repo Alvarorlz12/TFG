@@ -55,7 +55,7 @@ model:
   type: deeplabv3
   num_classes: 5
   dropout_rate: 0.2
-  pretrained: True
+  pretrained: False
 
 training:
   num_epochs: 2
@@ -64,7 +64,7 @@ training:
   # FocalLoss
   loss_function: "FocalLoss"
   loss_params:
-    gamma: 2.0
+    gamma: 0.0
     reduction: "mean"
   # CombinedLoss
   # loss_function:  "CombinedLoss"

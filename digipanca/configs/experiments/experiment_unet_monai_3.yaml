@@ -1,5 +1,5 @@
 name: "experiment_unet_monai"
-description: "Experiment with UNet (MONAI) and data augmentation with bs=8 and Focal Loss"
+description: "Experiment with UNet (MONAI) and data augmentation with bs=4 and Weighted Dice Loss"
 
 data:
   root_dir: "data"  # Root directory of the dataset
@@ -8,7 +8,7 @@ data:
   num_classes: 5  # Background, Pancreas, Tumor, Arteries, Veins
   input_size: [512, 512]  # Images size
   num_workers: 2  # Number of workers to use in the DataLoader
-  batch_size: 8  # Number of samples in each batch
+  batch_size: 4  # Number of samples in each batch
 
 transforms:
   - ApplyWindow:
@@ -56,9 +56,10 @@ training:
   num_epochs: 200
   learning_rate: 0.0001
   weight_decay: 0.00001
-  loss_function:  "FocalLoss"
+  loss_function: "WeightedDiceLoss"
   loss_params:
-    gamma: 2.0
+    num_classes: 5
+    include_background: True
     reduction: "mean"
   device: "cuda"
   patience: 25

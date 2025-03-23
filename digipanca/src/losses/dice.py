@@ -1,7 +1,9 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from monai.losses import DiceLoss as MONAIDiceLoss
 
+#region Multiclass Dice Loss
 class MulticlassDiceLoss(nn.Module):
     """Dice Loss for multiple classes."""
 
@@ -80,3 +82,37 @@ class MulticlassDiceLoss(nn.Module):
         if total_weight > 0:
             return dice_loss / total_weight
         return dice_loss / (num_classes - start_class)
+#endregion
+
+#region Weighted Dice Loss
+class WeightedDiceLoss(nn.Module):
+    def __init__(self, num_classes, include_background=True, reduction="mean"):
+        super(WeightedDiceLoss, self).__init__()
+        self.num_classes = num_classes
+        self.dice_loss = MONAIDiceLoss(
+            include_background=True,
+            reduction="mean"
+        )
+
+    def _compute_class_weights(self, y_true):
+        """
+        Compute class weights based on the number of pixels in each class.
+        """
+        class_counts = torch.bincount(y_true.flatten(), minlength=self.num_classes)
+        total_pixels = class_counts.sum().float()
+        weights = total_pixels / (class_counts + 1e-6)  # Add epsilon to avoid division by zero
+        weights /= weights.sum()  # Normalize weights
+        return weights
+
+    def forward(self, y_pred, y_true):
+
+        # Convert y_true to one-hot encoding
+        y_true_onehot = F.one_hot(y_true, self.num_classes).permute(0, 3, 1, 2).float()
+
+        # Compute class weights
+        weights = self._compute_class_weights(y_true).to(y_pred.device)
+
+        # Compute Dice loss
+        loss = self.dice_loss(y_pred, y_true_onehot)
+        return (loss * weights).sum()
+#endregion

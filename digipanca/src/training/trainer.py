@@ -153,6 +153,7 @@ class Trainer:
             outputs = self.model(images)
             if isinstance(outputs, dict):
                 outputs = outputs["out"]
+
             loss = self.loss_fn(outputs, masks)
             # Check if loss is CombinedLoss which returns a tuple of losses
             if isinstance(loss, tuple):

@@ -4,7 +4,7 @@ import torch.nn.functional as F
 from monai.losses import FocalLoss as MONAIFocalLoss
 
 class FocalLoss(nn.Module):
-    def __init__(self, gamma=2.0, reduction='mean'):
+    def __init__(self, gamma=2.0, reduction='mean', include_background=False):
         """
         Focal Loss implementation using MONAI's FocalLoss.
 
@@ -16,7 +16,11 @@ class FocalLoss(nn.Module):
             Reduction method for the loss. Default is 'mean'.
         """
         super(FocalLoss, self).__init__()
-        self.monai_focal_loss = MONAIFocalLoss(gamma=gamma, reduction=reduction)
+        self.monai_focal_loss = MONAIFocalLoss(
+            gamma=gamma,
+            reduction=reduction,
+            include_background=include_background
+        )
 
     def forward(self, y_pred, y_true):
         """

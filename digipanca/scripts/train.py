@@ -15,7 +15,7 @@ from src.utils.config import load_config
 from src.data.augmentation import build_augmentations_from_config
 from src.data.transforms import build_transforms_from_config
 from src.models import UNet, CustomDeepLabV3
-from src.losses import MulticlassDiceLoss, CombinedLoss, FocalLoss
+from src.losses import MulticlassDiceLoss, CombinedLoss, FocalLoss, WeightedDiceLoss
 from src.data.dataset import PancreasDataset
 from src.training.trainer import Trainer, _SUMMARY
 from src.utils.logger import Logger
@@ -95,6 +95,12 @@ def get_loss_fn(config):
     elif loss_type == 'FocalLoss':
         return FocalLoss(
             gamma=config['training']['loss_params']['gamma'],
+            reduction=config['training']['loss_params']['reduction']
+        )
+    elif loss_type == 'WeightedDiceLoss':
+        return WeightedDiceLoss(
+            num_classes=config['model']['out_channels'],
+            include_background=config['training']['loss_params']['include_background'],
             reduction=config['training']['loss_params']['reduction']
         )
     else:
