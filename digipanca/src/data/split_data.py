@@ -42,12 +42,17 @@ def create_train_test_split(
     patient_ids = [os.path.basename(d) for d in sample_dirs]
     random.seed(random_state)
 
-    train_ids, test_ids = train_test_split(
-        patient_ids,
-        test_size=test_size,
-        random_state=random_state,
-        shuffle=shuffle
-    )
+    if test_size != 0.0:
+        train_ids, test_ids = train_test_split(
+            patient_ids,
+            test_size=test_size,
+            random_state=random_state,
+            shuffle=shuffle
+        )
+    else:
+        train_ids = patient_ids
+        test_ids = []
+
     train_ids, val_ids = train_test_split(
         train_ids,
         test_size=val_size,

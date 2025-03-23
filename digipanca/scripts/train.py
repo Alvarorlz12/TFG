@@ -15,7 +15,7 @@ from src.utils.config import load_config
 from src.data.augmentation import build_augmentations_from_config
 from src.data.transforms import build_transforms_from_config
 from src.models import UNet, CustomDeepLabV3
-from src.losses import MulticlassDiceLoss, CombinedLoss, FocalLoss, WeightedDiceLoss
+from src.losses import MulticlassDiceLoss, CombinedLoss, FocalLoss, WeightedDiceLoss, DiceFocalLoss
 from src.data.dataset import PancreasDataset
 from src.training.trainer import Trainer, _SUMMARY
 from src.utils.logger import Logger
@@ -103,11 +103,20 @@ def get_loss_fn(config):
             include_background=config['training']['loss_params']['include_background'],
             reduction=config['training']['loss_params']['reduction']
         )
+    elif loss_type == 'DiceFocalLoss':
+        return DiceFocalLoss(
+            include_background=config['training']['loss_params'].get('include_background', False),
+            gamma=config['training']['loss_params']['gamma'],
+            reduction=config['training']['loss_params']['reduction'],
+            lambda_dice=config['training']['loss_params'].get('lambda_dice', 1.0),
+            lambda_focal=config['training']['loss_params'].get('lambda_focal', 1.0),
+            alpha=config['training']['loss_params'].get('alpha', None)
+        )
     else:
         raise ValueError(f"Unsupported loss function: {loss_type}")
 #endregion
 
-#region MAIN FUNCTION
+#region MAIN
 def main():
     torch.cuda.empty_cache()
     

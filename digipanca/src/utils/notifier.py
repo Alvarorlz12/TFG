@@ -249,21 +249,17 @@ class Notifier:
             summary.get('completed_epochs', summary['epochs']),
             summary['epochs'],
             summary['best_model']['epoch'],
-            *[f"{value:.5f}".replace(".", ",") if isinstance(value, float) else value
-                for value in [
-                    summary['train_loss'], summary['val_loss'], summary['train_metrics']['dice'],
-                    summary['metrics']['dice'], summary['best_model']['loss'], 
-                    summary['best_model']['metrics'].get('dice', 'N/A'),
-                    summary['best_model']['metrics'].get('dice_class_0', 'N/A'),
-                    summary['best_model']['metrics'].get('dice_class_1', 'N/A'),
-                    summary['best_model']['metrics'].get('dice_class_2', 'N/A'),
-                    summary['best_model']['metrics'].get('dice_class_3', 'N/A'),
-                    summary['best_model']['metrics'].get('dice_class_4', 'N/A')
-                ]
-            ],
+            summary['train_loss'], summary['val_loss'], summary['train_metrics']['dice'],
+            summary['metrics']['dice'], summary['best_model']['loss'], 
+            summary['best_model']['metrics'].get('dice', 'N/A'),
+            summary['best_model']['metrics'].get('dice_class_0', 'N/A'),
+            summary['best_model']['metrics'].get('dice_class_1', 'N/A'),
+            summary['best_model']['metrics'].get('dice_class_2', 'N/A'),
+            summary['best_model']['metrics'].get('dice_class_3', 'N/A'),
+            summary['best_model']['metrics'].get('dice_class_4', 'N/A'),
             str(timedelta(seconds=summary['training_time']))[:-3],
             summary['start_time'],
             summary['end_time'],
             summary['experiment_dir']
         ]
-        self.results_sheet.append_row(row)
+        self.results_sheet.append_row(row, value_input_option="USER_ENTERED")

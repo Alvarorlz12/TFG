@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from monai.losses import DiceLoss as MONAIDiceLoss
+from monai.losses import DiceFocalLoss as MONAIDiceFocalLoss
 
 #region Multiclass Dice Loss
 class MulticlassDiceLoss(nn.Module):
@@ -18,7 +19,7 @@ class MulticlassDiceLoss(nn.Module):
         class_weights : list, optional
             Weights for each class.
         """
-        super(MulticlassDiceLoss, self).__init__()
+        super().__init__()
         self.smooth = smooth
         self.ignore_background = ignore_background
         self.class_weights = class_weights
@@ -48,7 +49,7 @@ class MulticlassDiceLoss(nn.Module):
             y_true_one_hot = F.one_hot(y_true.long(), num_classes).permute(0, 3, 1, 2).float()
 
         # Apply softmax to y_pred
-        y_pred_softmax = F.softmax(y_pred, dim=1)
+        y_pred_softmax = F.softmax(y_pred.float(), dim=1)
 
         # Initialize loss
         dice_loss = 0.0
@@ -116,3 +117,67 @@ class WeightedDiceLoss(nn.Module):
         loss = self.dice_loss(y_pred, y_true_onehot)
         return (loss * weights).sum()
 #endregion
+
+#region Dice Focal Loss
+class DiceFocalLoss(nn.Module):
+    def __init__(
+        self,
+        alpha=None,
+        gamma=2.0,
+        reduction='mean',
+        include_background=False,
+        lambda_dice=1.0,
+        lambda_focal=1.0
+    ):
+        """
+        Dice Focal Loss implementation using MONAI's DiceFocalLoss.
+
+        Parameters
+        ----------
+        alpha : float, optional
+            Focal loss alpha parameter.
+        gamma : float, optional
+            Focal loss gamma parameter.
+        reduction : str, optional
+            Reduction method for the loss. Default is 'mean'.
+        include_background : bool, optional
+            Whether to include the background class.
+        lambda_dice : float, optional
+            Weight for the Dice loss.
+        lambda_focal : float, optional
+            Weight for the Focal loss.
+        """
+        super(DiceFocalLoss, self).__init__()
+        self.monai_dice_focal = MONAIDiceFocalLoss(
+            alpha=alpha,
+            gamma=gamma,
+            reduction=reduction,
+            include_background=include_background,
+            lambda_dice=lambda_dice,
+            lambda_focal=lambda_focal,
+            softmax=True  # Assume y_pred is logits
+        )
+
+    def forward(self, y_pred, y_true):
+        """
+        Compute the Dice Focal Loss.
+
+        Parameters
+        ----------
+        y_pred : torch.Tensor
+            The model's predictions.
+        y_true : torch.Tensor
+            The ground truth labels.
+
+        Returns
+        -------
+        torch.Tensor
+            The computed Dice Focal Loss.
+        """
+        num_classes = y_pred.shape[1]
+
+        # Convert y_true to one-hot encoding if necessary
+        if y_true.dim() == 3:  # (B, H, W) → (B, C, H, W)
+            y_true = F.one_hot(y_true, num_classes=num_classes).permute(0, 3, 1, 2).float()
+
+        return self.monai_dice_focal(y_pred, y_true)

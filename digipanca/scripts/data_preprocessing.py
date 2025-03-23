@@ -5,6 +5,7 @@ from src.utils.config import load_config
 
 def main():
     config = load_config()
+    # config = load_config("configs/data/default_no_test.yaml")
     RAW_DATA_DIR = config["data"]["raw_dir"]
     TEST_SIZE = config["data"]["test_split"]
     VAL_SIZE = config["data"]["val_split"]
@@ -18,7 +19,7 @@ def main():
         test_size=TEST_SIZE,
         val_size=VAL_SIZE,
         random_state=42,
-        shuffle=SHUFFLE    
+        shuffle=SHUFFLE
     )
 
 if __name__ == "__main__":
