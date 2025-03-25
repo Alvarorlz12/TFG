@@ -1,5 +1,6 @@
 import cv2
 import torch
+import numpy as np
 
 from nibabel.orientations import axcodes2ornt, io_orientation, ornt_transform, apply_orientation
 
@@ -7,7 +8,7 @@ from src.data.preprocessing import apply_window, normalize
 
 #region TRANSFORMS
 class ApplyWindow:
-    """Apply a window to the image."""
+    """Apply a window to the image (2D or 3D)."""
     def __init__(self, window_level=50, window_width=400):
         self.window_level = window_level
         self.window_width = window_width
@@ -17,32 +18,65 @@ class ApplyWindow:
         return image, mask
     
 class Normalize:
-    """Normalize the image to the range [0, 1]."""
+    """Normalize the image (2D or 3D) to the range [0, 1]."""
     def __call__(self, image, mask):
         image = normalize(image)
         return image, mask
 
 class CropBorders:
-    """Crop the borders of the image and mask by a specified size."""
+    """
+    Crop the borders of the image and mask by a specified size (only in 
+    H and W dimensions)
+    """
     def __init__(self, crop_size=100):
         self.crop_size = crop_size
 
-    def __call__(self, image, mask):
-        h, w = image.shape
-        # Ensure crop is within image bounds
-        crop = min(self.crop_size, h // 2, w // 2)
-        return image[crop:-crop, crop:-crop], mask[crop:-crop, crop:-crop]
+    def __call__(self, image, mask):        
+        if image.ndim == 2:
+            h, w = image.shape
+            # Ensure crop is within image bounds
+            crop = min(self.crop_size, h // 2, w // 2)
+            return image[crop:-crop, crop:-crop], mask[crop:-crop, crop:-crop]
+        
+        elif image.ndim == 3:
+            h, w, _ = image.shape
+            # Ensure crop is within image bounds
+            crop = min(self.crop_size, h // 2, w // 2)
+            return image[crop:-crop, crop:-crop, :], mask[crop:-crop, crop:-crop, :]
     
 class Resize:
-    """Resize the image and mask to a specified size."""
+    """
+    Resize the image and mask to a specified size (only in H and W 
+    dimensions, keeping D fixed if 3D).
+    """
     def __init__(self, size=(512, 512)):
-        self.size = size
+        self.size = size    # Target size (H, W)
 
     def __call__(self, image, mask):
-        return (
-            cv2.resize(image, self.size, interpolation=cv2.INTER_CUBIC),
-            cv2.resize(mask, self.size, interpolation=cv2.INTER_NEAREST)
-        )
+        if isinstance(image, torch.Tensor):
+            image = image.numpy()
+            mask = mask.numpy()
+        
+        if image.ndim == 2: # 2D image
+            return (
+                cv2.resize(image, self.size, interpolation=cv2.INTER_CUBIC),
+                cv2.resize(mask, self.size, interpolation=cv2.INTER_NEAREST)
+            )
+        
+        elif image.ndim == 3:   # 3D image
+            h, w, d = image.shape
+            resized_image = np.zeros((*self.size, d), dtype=image.dtype)
+            resized_mask = np.zeros((*self.size, d), dtype=mask.dtype)
+
+            for i in range(d):  # Resize each slice individually
+                resized_image[:, :, i] = cv2.resize(
+                    image[:, :, i], self.size, interpolation=cv2.INTER_CUBIC
+                )
+                resized_mask[:, :, i] = cv2.resize(
+                    mask[:, :, i], self.size, interpolation=cv2.INTER_NEAREST
+                )
+
+            return resized_image, resized_mask
     
 class Orientation:
     """Orient the image to a specified orientation."""
@@ -55,13 +89,46 @@ class Orientation:
         image = apply_orientation(image_nifti.get_fdata(), transform)
         return image, transform
 
+class CropROI:
+    """
+    Crop the image and mask using predefined ROI values (h_min, h_max, w_min, w_max).
+
+    Parameters
+    ----------
+    h_min : int
+        Minimum height index for cropping.
+    h_max : int
+        Maximum height index for cropping.
+    w_min : int
+        Minimum width index for cropping.
+    w_max : int
+        Maximum width index for cropping.
+    """
+    def __init__(self, h_min, h_max, w_min, w_max):
+        self.h_min = h_min
+        self.h_max = h_max
+        self.w_min = w_min
+        self.w_max = w_max
+
+    def __call__(self, image, mask):
+        return (
+            image[self.h_min:self.h_max, self.w_min:self.w_max, ...], 
+            mask[self.h_min:self.h_max, self.w_min:self.w_max, ...]
+        )
+
 class ToTensor:
     """Convert NumPy arrays to PyTorch tensors."""
     def __call__(self, image, mask):
-        return (
-            torch.tensor(image, dtype=torch.float32).unsqueeze(0),
-            torch.tensor(mask, dtype=torch.long)
-        )
+        if image.ndim == 2:
+            return (
+                torch.tensor(image, dtype=torch.float32).unsqueeze(0),
+                torch.tensor(mask, dtype=torch.long)
+            )
+        elif image.ndim == 3:
+            return (
+                torch.tensor(image, dtype=torch.float32).unsqueeze(0),
+                torch.tensor(mask, dtype=torch.long)
+            )
     
 class Compose:
     """Compose multiple transforms."""
@@ -70,7 +137,16 @@ class Compose:
 
     def __call__(self, image, mask):
         for transform in self.transforms:
-            image, mask = transform(image, mask)
+            result = transform(image, mask)
+            
+            if result is None:
+                raise ValueError(f"{transform.__class__.__name__} returned None")
+            
+            try:
+                image, mask = result
+            except ValueError:
+                raise ValueError(f"{transform.__class__.__name__} returned an unexpected output: {result}")
+
         return image, mask
     
 #region PIPELINES
@@ -82,6 +158,7 @@ _TRANSFORMS = {
     'CropBorders': CropBorders,
     'Resize': Resize,
     'Orientation': Orientation,
+    'CropROI': CropROI,
     'ToTensor': ToTensor,
     'Compose': Compose
 }

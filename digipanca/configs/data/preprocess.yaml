@@ -1,0 +1,13 @@
+data:
+  root_dir: "data"
+  raw_dir: "raw"
+  processed_dir: "processed"
+  subvolume_size: 64
+  subvolume_stride: 32
+  target_orientation: ['R', 'P', 'S']
+  split_path: "splits/one.json"
+  roi:
+    w_min: 156
+    w_max: 412
+    h_min: 124
+    h_max: 380

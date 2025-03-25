@@ -1,0 +1,19 @@
+data:
+  root_dir: "data"  # Root directory of the dataset
+  raw_dir: "raw"  # Directory containing the raw data
+  processed_dir: "processed"  # Directory containing the processed data
+  subvolume_size: 64
+  subvolume_stride: 32
+  target_orientation: ['R', 'P', 'S']
+  split_path: "splits/one.json"
+  num_classes: 5  # Background, Pancreas, Tumor, Arteries, Veins
+  test_split: 0.0 # No test split
+  val_split: 0.2  # 20% of the dataset to include in the validation split
+  shuffle: true
+  num_workers: 4  # Number of workers to use in the DataLoader
+  batch_size: 4  # Number of samples in each batch
+
+transforms:
+  - Resize:
+      size: [512, 512]
+  - ToTensor: {}
