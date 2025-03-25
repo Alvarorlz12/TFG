@@ -138,8 +138,6 @@ def process_patient(
         # Class label assignment: 1 for pancreas, 2 for tumor...
         masks[mask_data > 0] = i
 
-    print(f"image shape: {image.shape}, mask shape: {masks.shape}")
-
     num_slices = image.shape[2]
 
     padded = 0

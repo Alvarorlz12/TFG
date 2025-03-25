@@ -47,7 +47,7 @@ def generate_split(config_path=None):
     )
     print("✅ Data splits created.")
 
-def preprocess_data(config_path='configs/data/default3d.yaml'):
+def preprocess_data(config_path='configs/data/preprocess.yaml'):
     """
     Preprocess the data.
     
