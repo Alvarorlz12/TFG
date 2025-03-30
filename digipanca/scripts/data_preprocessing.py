@@ -82,10 +82,12 @@ def preprocess_data(config_path='configs/data/preprocess.yaml'):
         output_dir = os.path.join(PROCESSED_DATA_DIR, split_type)
         os.makedirs(output_dir, exist_ok=True)
 
+        metadata = {}
+
         print(f"🔄 Preprocessing {split_type} data... {len(patients)} patients found.")
         for patient_id in patients:
             patient_dir = os.path.join(RAW_DATA_DIR, patient_id)
-            num_subvolumes = process_patient(
+            num_subvolumes, patient_metadata = process_patient(
                 patient_dir=patient_dir,
                 output_dir=output_dir,
                 subvolume_size=SUBVOLUME_SIZE,
@@ -96,7 +98,15 @@ def preprocess_data(config_path='configs/data/preprocess.yaml'):
                 w_min=W_MIN,
                 w_max=W_MAX
             )
+            # Update metadata with patient information
+            metadata.update(patient_metadata)
             print(f"✅ {patient_id}: {num_subvolumes} sub-volumes saved.")
+
+        # Save metadata for the split
+        metadata_path = os.path.join(output_dir, "metadata.json")
+        with open(metadata_path, "w") as f:
+            json.dump(metadata, f, indent=4)
+
         print(f"✅ {split_type} completed\n")
 
 

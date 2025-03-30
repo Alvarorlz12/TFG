@@ -92,6 +92,8 @@ def process_patient(
     -------
     int
         Number of sub-volumes saved.
+    dict
+        Metadata for the sub-volumes.
     """
     patient_id = os.path.basename(patient_dir)
     reorient = transforms.Orientation(target_orientation)
@@ -211,12 +213,7 @@ def process_patient(
 
         subvolume_idx += 1
 
-    # Save metadata
-    metadata_path = os.path.join(output_dir, "metadata.json")
-    with open(metadata_path, "w") as f:
-        json.dump(metadata, f, indent=4)
-
-    return subvolume_idx
+    return subvolume_idx, metadata
 
 def apply_window(image, window_level, window_width):
     """

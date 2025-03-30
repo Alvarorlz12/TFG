@@ -131,9 +131,12 @@ class ToTensor:
                 torch.tensor(mask, dtype=torch.long)
             )
         elif image.ndim == 3:
+            image = torch.from_numpy(image) if isinstance(image, np.ndarray) else image
+            mask = torch.from_numpy(mask) if isinstance(mask, np.ndarray) else mask
+
             return (
-                torch.tensor(image, dtype=torch.float32).unsqueeze(0),
-                torch.tensor(mask, dtype=torch.long)
+                image.clone().detach().float().unsqueeze(0),
+                mask.clone().detach().long()
             )
     
 class Compose:

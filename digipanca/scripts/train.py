@@ -105,11 +105,22 @@ def get_model(config):
             pretrained=config['model']['pretrained']
         )
     elif model_type == 'unet3d':
-        return UNet3D(
-            in_channels=config['model']['in_channels'],
-            out_channels=config['model']['out_channels'],
-            base_channels=config['model']['base_channels']
-        )
+        if config['model'].get('use_monai', False):
+            return MONAIUNet(
+                spatial_dims=3,
+                in_channels=config['model']['in_channels'],
+                out_channels=config['model']['out_channels'],
+                channels=[64, 128, 256, 512],
+                strides=[2, 2, 2],
+                num_res_units=3,
+                norm=Norm.BATCH
+            )
+        else:
+            return UNet3D(
+                in_channels=config['model']['in_channels'],
+                out_channels=config['model']['out_channels'],
+                base_channels=config['model']['base_channels']
+            )
     else:
         raise ValueError(f"Unsupported model type: {model_type}")
 

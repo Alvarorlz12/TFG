@@ -36,6 +36,8 @@ class PancreasDataset3D(Dataset):
         # Get the list of image filenames
         self.image_filenames = sorted(self.metadata.keys())
 
+        print(f"📊 Loading dataset... {len(self.image_filenames)} sub-volumes found.")
+
         # Load the data into memory if specified
         if self.load_into_memory:
             self.data = {
@@ -47,6 +49,8 @@ class PancreasDataset3D(Dataset):
                 )
                 for filename in self.image_filenames
             }
+
+        print(f"✅ Dataset loaded. {len(self.image_filenames)} samples found.")
 
     def __len__(self):
         return len(self.image_filenames)

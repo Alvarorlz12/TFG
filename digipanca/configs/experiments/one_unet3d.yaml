@@ -22,9 +22,10 @@ transforms:
 
 model:
   type: unet3d
+  use_monai: True
   in_channels: 1
   out_channels: 5
-  base_channels: 32
+  base_channels: 64
 
 training:
   num_epochs: 2
