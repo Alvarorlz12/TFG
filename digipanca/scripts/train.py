@@ -14,9 +14,10 @@ from datetime import datetime
 from src.utils.config import load_config
 from src.data.augmentation import build_augmentations_from_config
 from src.data.transforms import build_transforms_from_config
-from src.models import UNet, CustomDeepLabV3
+from src.models import UNet, CustomDeepLabV3, UNet3D
 from src.losses import MulticlassDiceLoss, CombinedLoss, FocalLoss, WeightedDiceLoss, DiceFocalLoss
 from src.data.dataset import PancreasDataset
+from src.data.dataset3d import PancreasDataset3D
 from src.training.trainer import Trainer, _SUMMARY
 from src.utils.logger import Logger
 from src.utils.notifier import Notifier
@@ -31,6 +32,48 @@ def get_augment(config):
     """Initialize augmentations based on configuration."""
     augment_config = config.get('augmentations', None)
     return build_augmentations_from_config(augment_config)
+
+def get_dataset(config, split_type='train', transform=None, augment=None):
+    """Initialize dataset based on configuration.
+    
+    Parameters
+    ----------
+    config : dict
+        Configuration dictionary.
+    split_type : str, optional
+        Split type (train/val/test), by default 'train'.
+    transform : callable, optional
+        Transform function, by default None.
+    augment : callable, optional
+        Augmentation function, by default None.
+
+    Returns
+    -------
+    PancreasDataset or PancreasDataset3D
+        Pancreas dataset object.
+    """
+    # Check that there is not augmentation for validation/test sets
+    if split_type != 'train' and augment is not None:
+        raise ValueError("Augmentations are only allowed for the training set.")
+    # Ensure split type is valid
+    if split_type not in ['train', 'val', 'test']:
+        raise ValueError(f"Invalid split type: {split_type}")
+    
+    if config['data'].get('is_3d', False):
+        data_dir = os.path.join(config['data']['processed_dir'], split_type)
+        return PancreasDataset3D(
+            data_dir=data_dir,
+            transform=transform,
+            load_into_memory=config['data'].get('load_into_memory', False)
+        )
+    else:
+        return PancreasDataset(
+            data_dir=config['data']['raw_dir'],
+            split_file=config['data']['split_path'],
+            split_type=split_type,
+            transform=transform,
+            augment=augment
+        )
 
 def get_model(config):
     """Initialize model based on configuration."""
@@ -60,6 +103,12 @@ def get_model(config):
             num_classes=config['model']['num_classes'],
             dropout_rate=config['model']['dropout_rate'],
             pretrained=config['model']['pretrained']
+        )
+    elif model_type == 'unet3d':
+        return UNet3D(
+            in_channels=config['model']['in_channels'],
+            out_channels=config['model']['out_channels'],
+            base_channels=config['model']['base_channels']
         )
     else:
         raise ValueError(f"Unsupported model type: {model_type}")
@@ -174,19 +223,30 @@ def main():
     augment = get_augment(config)
     
     # Create dataset and data loaders
-    train_dataset = PancreasDataset(
-        data_dir=RAW_DIR,
-        split_file=config['data']['split_path'],
+    train_dataset = get_dataset(
+        config=config,
         split_type='train',
         transform=transform,
         augment=augment
     )
-    val_dataset = PancreasDataset(
-        data_dir=RAW_DIR,
-        split_file=config['data']['split_path'],
+    val_dataset = get_dataset(
+        config=config,
         split_type='val',
         transform=transform
     )
+    # train_dataset = PancreasDataset(
+    #     data_dir=RAW_DIR,
+    #     split_file=config['data']['split_path'],
+    #     split_type='train',
+    #     transform=transform,
+    #     augment=augment
+    # )
+    # val_dataset = PancreasDataset(
+    #     data_dir=RAW_DIR,
+    #     split_file=config['data']['split_path'],
+    #     split_type='val',
+    #     transform=transform
+    # )
     
     train_loader = DataLoader(
         train_dataset,

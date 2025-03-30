@@ -1,4 +1,5 @@
 from .dataset import PancreasDataset
+from .dataset3d import PancreasDataset3D
 from .split_data import create_train_test_split, load_train_test_split
 from .preprocessing import apply_window, normalize
 from .transforms import build_transforms_from_config
@@ -7,6 +8,7 @@ from .augmentation import build_augmentations_from_config
 __all__ = [
     # Dataset
     "PancreasDataset",
+    "PancreasDataset3D",
     # Split data
     "create_train_test_split",
     "load_train_test_split",

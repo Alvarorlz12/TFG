@@ -1,14 +1,14 @@
 import torch
 
-class SegmentationMetrics:
+class SegmentationMetrics3D:
     """
-    Class for computing segmentation metrics for pancreas segmentation.
+    Class for computing 3D segmentation metrics for pancreas segmentation.
     """
     
     @staticmethod
     def dice_coefficient(y_pred, y_true, smooth=1e-6):
         """
-        Compute Dice coefficient.
+        Compute Dice coefficient for 3D segmentation.
         
         Parameters
         ----------
@@ -25,48 +25,45 @@ class SegmentationMetrics:
             Dice coefficient (overall and per-class)
         """
         # Convert to one-hot if inputs are class indices
-        if y_pred.dim() == 3:
+        if y_pred.dim() == 4:
             # Convert predicted class indices to one-hot
             n_classes = torch.max(y_true).item() + 1
             y_pred_one_hot = torch.zeros(
-                y_pred.size(0), n_classes, y_pred.size(1), y_pred.size(2), 
+                y_pred.size(0), n_classes, y_pred.size(1), y_pred.size(2), y_pred.size(3), 
                 device=y_pred.device
             )
             y_pred_one_hot.scatter_(1, y_pred.unsqueeze(1), 1)
             
             y_true_one_hot = torch.zeros(
-                y_true.size(0), n_classes, y_true.size(1), y_true.size(2), 
+                y_true.size(0), n_classes, y_true.size(1), y_true.size(2), y_true.size(3), 
                 device=y_true.device
             )
             y_true_one_hot.scatter_(1, y_true.unsqueeze(1), 1)
-            print("if")
         else:
-            # If already in form [B, C, H, W] (logits or one-hot)
-            if y_pred.dim() == 4 and y_true.dim() == 3:
-                # y_pred is [B, C, H, W] logits and y_true is [B, H, W] indices
+            # If already in form [B, C, H, W, D] (logits or one-hot)
+            if y_pred.dim() == 5 and y_true.dim() == 4:
+                # y_pred is [B, C, H, W, D] logits and y_true is [B, H, W, D] indices
                 n_classes = y_pred.size(1)
                 y_pred_one_hot = torch.nn.functional.softmax(y_pred, dim=1)
                 
                 y_true_one_hot = torch.zeros(
-                    y_true.size(0), n_classes, y_true.size(1), y_true.size(2), 
+                    y_true.size(0), n_classes, y_true.size(1), y_true.size(2), y_true.size(3), 
                     device=y_true.device
                 )
                 y_true_one_hot.scatter_(1, y_true.unsqueeze(1), 1)
-                print("else if")
             else:
                 # Assume both are already in proper format
                 y_pred_one_hot = y_pred
                 y_true_one_hot = y_true
                 n_classes = y_pred.size(1)
-                print("else")
         
         # Calculate dice for each class
         dice_scores = []
         class_dice = {}
         
         for i in range(n_classes):
-            pred_class = y_pred_one_hot[:, i, :, :]
-            true_class = y_true_one_hot[:, i, :, :]
+            pred_class = y_pred_one_hot[:, i, :, :, :]
+            true_class = y_true_one_hot[:, i, :, :, :]
             
             intersection = torch.sum(pred_class * true_class)
             union = torch.sum(pred_class) + torch.sum(true_class)
@@ -82,7 +79,7 @@ class SegmentationMetrics:
     @staticmethod
     def iou_score(y_pred, y_true, smooth=1e-6):
         """
-        Compute IoU (Jaccard Index) for multiclass segmentation.
+        Compute IoU (Jaccard Index) for 3D multiclass segmentation.
         
         Parameters
         ----------
@@ -99,29 +96,29 @@ class SegmentationMetrics:
             (mean_iou, per_class_iou_dict)
         """
         # Convert to one-hot if inputs are class indices
-        if y_pred.dim() == 3:
+        if y_pred.dim() == 4:
             # Assume both are class indices
             n_classes = torch.max(y_true).item() + 1
             y_pred_one_hot = torch.zeros(
-                y_pred.size(0), n_classes, y_pred.size(1), y_pred.size(2), 
+                y_pred.size(0), n_classes, y_pred.size(1), y_pred.size(2), y_pred.size(3), 
                 device=y_pred.device
             )
             y_pred_one_hot.scatter_(1, y_pred.unsqueeze(1), 1)
             
             y_true_one_hot = torch.zeros(
-                y_true.size(0), n_classes, y_true.size(1), y_true.size(2), 
+                y_true.size(0), n_classes, y_true.size(1), y_true.size(2), y_true.size(3), 
                 device=y_true.device
             )
             y_true_one_hot.scatter_(1, y_true.unsqueeze(1), 1)
         else:
-            # If already in form [B, C, H, W] (logits or one-hot)
-            if y_pred.dim() == 4 and y_true.dim() == 3:
-                # y_pred is [B, C, H, W] logits and y_true is [B, H, W] indices
+            # If already in form [B, C, H, W, D] (logits or one-hot)
+            if y_pred.dim() == 5 and y_true.dim() == 4:
+                # y_pred is [B, C, H, W, D] logits and y_true is [B, H, W, D] indices
                 n_classes = y_pred.size(1)
                 y_pred_one_hot = torch.nn.functional.softmax(y_pred, dim=1)
                 
                 y_true_one_hot = torch.zeros(
-                    y_true.size(0), n_classes, y_true.size(1), y_true.size(2), 
+                    y_true.size(0), n_classes, y_true.size(1), y_true.size(2), y_true.size(3), 
                     device=y_true.device
                 )
                 y_true_one_hot.scatter_(1, y_true.unsqueeze(1), 1)
@@ -136,8 +133,8 @@ class SegmentationMetrics:
         class_iou = {}
         
         for i in range(n_classes):
-            pred_class = y_pred_one_hot[:, i, :, :]
-            true_class = y_true_one_hot[:, i, :, :]
+            pred_class = y_pred_one_hot[:, i, :, :, :]
+            true_class = y_true_one_hot[:, i, :, :, :]
             
             intersection = torch.sum(pred_class * true_class)
             union = torch.sum(pred_class) + torch.sum(true_class) - intersection
@@ -153,7 +150,7 @@ class SegmentationMetrics:
     @staticmethod
     def precision_recall(y_pred, y_true, smooth=1e-6):
         """
-        Compute precision and recall for multiclass segmentation.
+        Compute precision and recall for 3D multiclass segmentation.
         
         Parameters
         ----------
@@ -170,29 +167,29 @@ class SegmentationMetrics:
             (mean_precision, mean_recall, per_class_precision_dict, per_class_recall_dict)
         """
         # Convert to one-hot if inputs are class indices
-        if y_pred.dim() == 3:
+        if y_pred.dim() == 4:
             # Assume both are class indices
             n_classes = torch.max(y_true).item() + 1
             y_pred_one_hot = torch.zeros(
-                y_pred.size(0), n_classes, y_pred.size(1), y_pred.size(2), 
+                y_pred.size(0), n_classes, y_pred.size(1), y_pred.size(2), y_pred.size(3), 
                 device=y_pred.device
             )
             y_pred_one_hot.scatter_(1, y_pred.unsqueeze(1), 1)
             
             y_true_one_hot = torch.zeros(
-                y_true.size(0), n_classes, y_true.size(1), y_true.size(2), 
+                y_true.size(0), n_classes, y_true.size(1), y_true.size(2), y_true.size(3), 
                 device=y_true.device
             )
             y_true_one_hot.scatter_(1, y_true.unsqueeze(1), 1)
         else:
-            # If already in form [B, C, H, W] (logits or one-hot)
-            if y_pred.dim() == 4 and y_true.dim() == 3:
-                # y_pred is [B, C, H, W] logits and y_true is [B, H, W] indices
+            # If already in form [B, C, H, W, D] (logits or one-hot)
+            if y_pred.dim() == 5 and y_true.dim() == 4:
+                # y_pred is [B, C, H, W, D] logits and y_true is [B, H, W, D] indices
                 n_classes = y_pred.size(1)
                 y_pred_one_hot = torch.nn.functional.softmax(y_pred, dim=1)
                 
                 y_true_one_hot = torch.zeros(
-                    y_true.size(0), n_classes, y_true.size(1), y_true.size(2), 
+                    y_true.size(0), n_classes, y_true.size(1), y_true.size(2), y_true.size(3), 
                     device=y_true.device
                 )
                 y_true_one_hot.scatter_(1, y_true.unsqueeze(1), 1)
@@ -209,8 +206,8 @@ class SegmentationMetrics:
         class_recall = {}
         
         for i in range(n_classes):
-            pred_class = y_pred_one_hot[:, i, :, :]
-            true_class = y_true_one_hot[:, i, :, :]
+            pred_class = y_pred_one_hot[:, i, :, :, :]
+            true_class = y_true_one_hot[:, i, :, :, :]
             
             true_positives = torch.sum(pred_class * true_class)
             predicted_positives = torch.sum(pred_class)
@@ -236,7 +233,7 @@ class SegmentationMetrics:
     @staticmethod
     def all_metrics(y_pred, y_true):
         """
-        Compute all metrics for multiclass segmentation.
+        Compute all metrics for 3D multiclass segmentation.
         
         Parameters
         ----------
@@ -253,23 +250,23 @@ class SegmentationMetrics:
         metrics = {}
         
         # Convert logits to class indices if necessary
-        if y_pred.dim() == 4:
-            # Logits [B, C, H, W] -> Class indices [B, H, W]
+        if y_pred.dim() == 5:
+            # Logits [B, C, H, W, D] -> Class indices [B, H, W, D]
             y_pred_indices = torch.argmax(y_pred, dim=1)
         else:
             # Already class indices
             y_pred_indices = y_pred
             
         # Calculate Dice coefficient
-        mean_dice, class_dice = SegmentationMetrics.dice_coefficient(y_pred, y_true)
+        mean_dice, class_dice = SegmentationMetrics3D.dice_coefficient(y_pred, y_true)
         metrics.update(class_dice)
         
         # Calculate IoU score
-        mean_iou, class_iou = SegmentationMetrics.iou_score(y_pred, y_true)
+        mean_iou, class_iou = SegmentationMetrics3D.iou_score(y_pred, y_true)
         metrics.update(class_iou)
         
         # Calculate precision and recall
-        mean_precision, mean_recall, class_precision, class_recall = SegmentationMetrics.precision_recall(y_pred, y_true)
+        mean_precision, mean_recall, class_precision, class_recall = SegmentationMetrics3D.precision_recall(y_pred, y_true)
         metrics.update(class_precision)
         metrics.update(class_recall)
         

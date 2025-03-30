@@ -148,6 +148,10 @@ def process_patient(
         padded = subvolume_size - num_slices
         num_slices = subvolume_size
 
+    # Transpose the image and masks to (D, H, W)
+    image = np.transpose(image, (2, 0, 1))
+    masks = np.transpose(masks, (2, 0, 1))
+
     # Saving directories
     output_img_dir = os.path.join(output_dir, "images")
     output_mask_dir = os.path.join(output_dir, "masks")
@@ -159,8 +163,10 @@ def process_patient(
     # Generate sub-volumes
     subvolume_idx = 0
     for start in range(0, num_slices - subvolume_size + 1, subvolume_stride):
-        image_subvol = image[:, :, start:start + subvolume_size]
-        mask_subvol = masks[:, :, start:start + subvolume_size]
+        image_subvol = image[start:start + subvolume_size, ...]
+        mask_subvol = masks[start:start + subvolume_size, ...]
+        # image_subvol = image[:, :, start:start + subvolume_size]
+        # mask_subvol = masks[:, :, start:start + subvolume_size]
 
         img_filename = f"image_{patient_id}_{subvolume_idx}.npy"
         mask_filename = f"mask_{patient_id}_{subvolume_idx}.npy"
@@ -185,8 +191,10 @@ def process_patient(
 
     # Last sub-volume
     if num_slices % subvolume_stride != 0:
-        image_subvol = image[:, :, -subvolume_size:]
-        mask_subvol = masks[:, :, -subvolume_size:]
+        image_subvol = image[-subvolume_size:, ...]
+        mask_subvol = masks[-subvolume_size:, ...]
+        # image_subvol = image[:, :, -subvolume_size:]
+        # mask_subvol = masks[:, :, -subvolume_size:]
 
         img_filename = f"image_{patient_id}_{subvolume_idx}.npy"
         mask_filename = f"mask_{patient_id}_{subvolume_idx}.npy"

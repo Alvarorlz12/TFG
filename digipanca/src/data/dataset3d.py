@@ -71,5 +71,47 @@ class PancreasDataset3D(Dataset):
         if image.dim() == 3:
             image = image.unsqueeze(0)
 
-        return image, mask, patient_id, slices
+        return image, mask, patient_id
+    
+    def get_volume_slice_idx(self, idx, slice_idx):
+        """
+        Get the real slice index in the original volume.
+
+        Parameters
+        ----------
+        idx : int
+            Index of the sample in the dataset.
+        slice_idx : int
+            Index of the slice in the sub-volume.
+
+        Returns
+        -------
+        int
+            Real slice index in the original volume.
+        """
+        filename = self.image_filenames[idx]
+        slices = self.metadata[filename]["slices"]
+        padded = self.metadata[filename].get("padded", 0) // 2
+        return slices[0] - padded + slice_idx
+    
+    def get_subvolume_slice_idx(self, idx, slice_idx):
+        """
+        Get the slice index in the sub-volume.
+
+        Parameters
+        ----------
+        idx : int
+            Index of the sample in the dataset.
+        slice_idx : int
+            Index of the slice in the original volume.
+
+        Returns
+        -------
+        int
+            Slice index in the sub-volume.
+        """
+        filename = self.image_filenames[idx]
+        slices = self.metadata[filename]["slices"]
+        padded = self.metadata[filename].get("padded", 0) // 2
+        return slices[0] + padded + slice_idx
         

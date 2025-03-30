@@ -177,7 +177,9 @@ class DiceFocalLoss(nn.Module):
         num_classes = y_pred.shape[1]
 
         # Convert y_true to one-hot encoding if necessary
-        if y_true.dim() == 3:  # (B, H, W) → (B, C, H, W)
+        if y_true.dim() == 3:   # 2D: (B, H, W) → (B, C, H, W)
             y_true = F.one_hot(y_true, num_classes=num_classes).permute(0, 3, 1, 2).float()
+        elif y_true.dim() == 4: # 3D: (B, D, H, W) → (B, C, D, H, W)
+            y_true = F.one_hot(y_true, num_classes=num_classes).permute(0, 4, 1, 2, 3).float()
 
         return self.monai_dice_focal(y_pred, y_true)

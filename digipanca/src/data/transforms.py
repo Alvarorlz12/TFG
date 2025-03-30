@@ -39,10 +39,10 @@ class CropBorders:
             return image[crop:-crop, crop:-crop], mask[crop:-crop, crop:-crop]
         
         elif image.ndim == 3:
-            h, w, _ = image.shape
+            _, h, w = image.shape   # Assuming image is in (D, H, W) format
             # Ensure crop is within image bounds
             crop = min(self.crop_size, h // 2, w // 2)
-            return image[crop:-crop, crop:-crop, :], mask[crop:-crop, crop:-crop, :]
+            return image[:, crop:-crop, crop:-crop], mask[:, crop:-crop, crop:-crop]
     
 class Resize:
     """
@@ -64,16 +64,16 @@ class Resize:
             )
         
         elif image.ndim == 3:   # 3D image
-            h, w, d = image.shape
-            resized_image = np.zeros((*self.size, d), dtype=image.dtype)
-            resized_mask = np.zeros((*self.size, d), dtype=mask.dtype)
+            d, h, w = image.shape
+            resized_image = np.zeros((d, *self.size), dtype=image.dtype)
+            resized_mask = np.zeros((d, *self.size), dtype=mask.dtype)
 
             for i in range(d):  # Resize each slice individually
-                resized_image[:, :, i] = cv2.resize(
-                    image[:, :, i], self.size, interpolation=cv2.INTER_CUBIC
+                resized_image[i, :, :] = cv2.resize(
+                    image[i, :, :], self.size, interpolation=cv2.INTER_CUBIC
                 )
-                resized_mask[:, :, i] = cv2.resize(
-                    mask[:, :, i], self.size, interpolation=cv2.INTER_NEAREST
+                resized_mask[i, :, :] = cv2.resize(
+                    mask[i, :, :], self.size, interpolation=cv2.INTER_NEAREST
                 )
 
             return resized_image, resized_mask
@@ -111,10 +111,16 @@ class CropROI:
         self.w_max = w_max
 
     def __call__(self, image, mask):
-        return (
-            image[self.h_min:self.h_max, self.w_min:self.w_max, ...], 
-            mask[self.h_min:self.h_max, self.w_min:self.w_max, ...]
-        )
+        if image.ndim == 2:
+            return (
+                image[self.h_min:self.h_max, self.w_min:self.w_max], 
+                mask[self.h_min:self.h_max, self.w_min:self.w_max]
+            )
+        elif image.ndim == 3:
+            return (
+                image[:, self.h_min:self.h_max, self.w_min:self.w_max], 
+                mask[:, self.h_min:self.h_max, self.w_min:self.w_max]
+            )
 
 class ToTensor:
     """Convert NumPy arrays to PyTorch tensors."""

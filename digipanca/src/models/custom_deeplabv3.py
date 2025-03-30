@@ -136,4 +136,9 @@ class CustomDeepLabV3(nn.Module):
 #     model = CustomDeepLabV3(num_classes=3, dropout_rate=0.3)
 #     input_tensor = torch.randn(2, 1, 256, 256)  # (batch, channels, height, width)
 #     output = model(input_tensor)
+#     trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+#     print(f"Trainable params: {trainable_params:,}")
 #     print(f"Output shape: {output['out'].shape}")  # Should be (2, 3, 256, 256)
+#     # Print values to verify the model's output
+#     print("Output values:")
+#     print(output['out'])
