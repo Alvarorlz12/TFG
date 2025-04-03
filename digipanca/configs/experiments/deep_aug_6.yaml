@@ -1,5 +1,5 @@
 name: "deep_aug"
-description: "DeepLabV3 with T&A, DiceFocalLoss, no test split and ROI focus"
+description: "DeepLabV3 with T&A, DiceFocalLoss, RoI focus and batch size 16"
 
 data:
   root_dir: "data"  # Root directory of the dataset

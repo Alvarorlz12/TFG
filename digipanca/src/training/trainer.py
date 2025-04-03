@@ -39,6 +39,7 @@ class Trainer:
             Notifier for sending messages to Telegram.
         """
         self.device = torch.device(config["device"] if torch.cuda.is_available() else "cpu")
+        print(self.device)
         self.model = model.to(self.device)
         self.loss_fn = loss_fn
         self.optimizer = optimizer
