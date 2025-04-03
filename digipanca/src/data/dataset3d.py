@@ -49,8 +49,7 @@ class PancreasDataset3D(Dataset):
                 )
                 for filename in self.image_filenames
             }
-
-        print(f"✅ Dataset loaded. {len(self.image_filenames)} samples found.")
+            print(f"✅ Dataset loaded. {len(self.image_filenames)} sub-volumes loaded.")
 
     def __len__(self):
         return len(self.image_filenames)

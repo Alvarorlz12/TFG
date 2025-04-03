@@ -3,6 +3,9 @@ import shutil
 import argparse
 import torch
 import json
+import torch
+import random
+import numpy as np
 
 from pathlib import Path
 from torch.utils.data import DataLoader
@@ -16,13 +19,23 @@ from src.data.augmentation import build_augmentations_from_config
 from src.data.transforms import build_transforms_from_config
 from src.models import UNet, CustomDeepLabV3, UNet3D
 from src.losses import MulticlassDiceLoss, CombinedLoss, FocalLoss, WeightedDiceLoss, DiceFocalLoss
-from src.data.dataset import PancreasDataset
+from src.data.dataset2d import PancreasDataset2D
 from src.data.dataset3d import PancreasDataset3D
 from src.training.trainer import Trainer, _SUMMARY
 from src.utils.logger import Logger
 from src.utils.notifier import Notifier
 
 #region AUXILIARY FUNCTIONS
+def set_seed(seed):
+    """Set random seed for reproducibility."""
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(seed)
+        torch.backends.cudnn.deterministic = True
+        torch.backends.cudnn.benchmark = False
+
 def get_transform(config):
     """Initialize transforms based on configuration."""
     transform_config = config.get('transforms', None)
@@ -59,20 +72,19 @@ def get_dataset(config, split_type='train', transform=None, augment=None):
     if split_type not in ['train', 'val', 'test']:
         raise ValueError(f"Invalid split type: {split_type}")
     
+    data_dir = os.path.join(config['data']['processed_dir'], split_type)
     if config['data'].get('is_3d', False):
-        data_dir = os.path.join(config['data']['processed_dir'], split_type)
         return PancreasDataset3D(
             data_dir=data_dir,
             transform=transform,
             load_into_memory=config['data'].get('load_into_memory', False)
         )
     else:
-        return PancreasDataset(
-            data_dir=config['data']['raw_dir'],
-            split_file=config['data']['split_path'],
-            split_type=split_type,
+        return PancreasDataset2D(
+            data_dir=data_dir,
             transform=transform,
-            augment=augment
+            augment=augment,
+            load_into_memory=config['data'].get('load_into_memory', False),
         )
 
 def get_model(config):
@@ -209,7 +221,10 @@ def main():
     
     # Load configuration
     config = load_config(args.config)
-    RAW_DIR = config['data']['raw_dir']
+
+    # Set random seed for reproducibility
+    seed = config['training'].get('seed', 42)
+    set_seed(seed)
     
     # Show experiment information
     print("Experiment:", args.experiment)
@@ -245,19 +260,6 @@ def main():
         split_type='val',
         transform=transform
     )
-    # train_dataset = PancreasDataset(
-    #     data_dir=RAW_DIR,
-    #     split_file=config['data']['split_path'],
-    #     split_type='train',
-    #     transform=transform,
-    #     augment=augment
-    # )
-    # val_dataset = PancreasDataset(
-    #     data_dir=RAW_DIR,
-    #     split_file=config['data']['split_path'],
-    #     split_type='val',
-    #     transform=transform
-    # )
     
     train_loader = DataLoader(
         train_dataset,

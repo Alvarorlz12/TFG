@@ -103,6 +103,16 @@ class PancreasDataset2D(Dataset):
 
             image, mask = self.augment(image, mask)
 
+        # Ensure image and mask are tensors
+        if not isinstance(image, torch.Tensor):
+            image = torch.tensor(image, dtype=torch.float32).cpu()
+        else:
+            image = image.clone().detach().to(dtype=torch.float32).cpu()
+        if not isinstance(mask, torch.Tensor):
+            mask = torch.tensor(mask, dtype=torch.long).cpu()
+        else:
+            mask = mask.clone().detach().to(dtype=torch.long).cpu()
+
         # Add channel dimension to the image
         if image.dim() == 2:
             image = image.unsqueeze(0)

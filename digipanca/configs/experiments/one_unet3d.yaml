@@ -4,7 +4,7 @@ description: "Fast test experiment with UNet3D"
 data:
   root_dir: "data"  # Root directory of the dataset
   raw_dir: "raw"  # Directory containing the raw data
-  processed_dir: "processed"
+  processed_dir: "test/3d"  # Directory for processed data
   is_3d: True
   num_classes: 5  # Background, Pancreas, Tumor, Arteries, Veins
   input_size: [512, 512]  # Images size
@@ -22,7 +22,7 @@ transforms:
 
 model:
   type: unet3d
-  use_monai: True
+  use_monai: False
   in_channels: 1
   out_channels: 5
   base_channels: 64

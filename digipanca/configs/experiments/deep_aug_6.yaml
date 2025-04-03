@@ -1,31 +1,31 @@
-name: "one_monai"
-description: "Fast test experiment with UNet (MONAI)"
+name: "deep_aug"
+description: "DeepLabV3 with T&A, DiceFocalLoss, no test split and ROI focus"
 
 data:
   root_dir: "data"  # Root directory of the dataset
   raw_dir: "raw"  # Directory containing the raw data
-  processed_dir: "test/2d"  # Directory for processed data
-  split_path: "splits/one.json"
+  processed_dir: "processed/2d"  # Directory for processed data
+  split_path: "splits/train_val_split.json"
   num_classes: 5  # Background, Pancreas, Tumor, Arteries, Veins
   input_size: [512, 512]  # Images size
   num_workers: 2  # Number of workers to use in the DataLoader
-  batch_size: 4  # Number of samples in each batch
+  batch_size: 16  # Number of samples in each batch
 
 transforms:
+  - CropROI:
+      w_min: 156
+      w_max: 412
+      h_min: 124
+      h_max: 380
   - ApplyWindow:
       window_level: 50
       window_width: 400
   - Normalize: {}
-  - CropBorders:
-      crop_size: 120
   - Resize:
-      size: [512, 512]
+      size: [256, 256]
   - ToTensor: {}
 
 augmentations:
-  - RandomCrop:
-      height: 256
-      width: 256
   - Affine:
       scale: [0.95, 1.05]
       translate_percent: [0.02, 0.02]
@@ -49,35 +49,19 @@ augmentations:
   - ToTensorV2: {}
 
 model:
-  type: unet
-  use_monai: True
-  in_channels: 1
-  out_channels: 5
-  dropout_rate: 0.1
+  type: deeplabv3
+  num_classes: 5
+  dropout_rate: 0.2
+  pretrained: True
 
 training:
-  num_epochs: 2
+  num_epochs: 100
   learning_rate: 0.0001
   weight_decay: 0.00001
-  # DiceFocalLoss
   loss_function: "DiceFocalLoss"
   loss_params:
+    include_background: True
     gamma: 2.0
     reduction: "mean"
-    include_background: True
-  # # Weighted Dice Loss
-  # loss_function: "WeightedDiceLoss"
-  # loss_params:
-  #   num_classes: 5
-  #   include_background: True
-  #   reduction: "mean"
-  # Focal Loss
-  # loss_function: "FocalLoss"
-  # loss_params:
-  #   gamma: 2.0
-  #   reduction: "mean"
-  # MulticlassDiceLoss
-  # loss_function:  "MulticlassDiceLoss"
-  # use_monai_loss: False
-  device: "cpu"
-  patience: 10
+  device: "cuda"
+  patience: 15

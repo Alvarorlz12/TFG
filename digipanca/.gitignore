@@ -23,6 +23,7 @@ var/
 # Data
 data/raw/*
 data/processed/*
+data/test/*
 experiments/*/*
 
 # Jupyter Notebooks
