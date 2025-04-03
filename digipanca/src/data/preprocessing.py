@@ -1,5 +1,6 @@
 import os
 import json
+import cv2
 import numpy as np
 import nibabel as nib
 
@@ -38,6 +39,19 @@ def save_npy(array, file_path):
     """
     np.save(file_path, array)
 
+def save_png(image, file_path):
+    """
+    Save an image to the given file path.
+
+    Parameters
+    ----------
+    image : np.ndarray
+        Image to save.
+    file_path : str
+        Path to save the image.
+    """
+    cv2.imwrite(file_path, image)
+
 def pad_volume(volume, target_size):
     """Pad a 3D volume along the Z-axis to match the target size."""
     current_size = volume.shape[2]
@@ -50,7 +64,7 @@ def pad_volume(volume, target_size):
 
     return np.pad(volume, ((0, 0), (0, 0), (pad_before, pad_after)), mode="constant")
 
-def process_patient(
+def process_patient_3d(
     patient_dir,
     output_dir,
     subvolume_size=64,
@@ -214,6 +228,129 @@ def process_patient(
         subvolume_idx += 1
 
     return subvolume_idx, metadata
+
+def process_patient_2d(
+    patient_dir,
+    output_dir,
+    target_orientation=("R", "P", "S"),
+    rotation_axes=(0, 1),
+    h_min=0, h_max=512,
+    w_min=0, w_max=512
+):
+    """
+    Process a patient directory containing NIfTI files. It loads the NIfTI files
+    and saves the 2D slices as NumPy files. The masks are also saved as PNG
+    files. The slices are saved in the specified orientation and with the 
+    specified orientation and with the specified rotation. The masks are also 
+    saved in the same orientation and rotation.
+
+    Parameters
+    ----------
+    patient_dir : str
+        Path to the patient directory.
+    output_dir : str
+        Directory to save the processed sub-volumes.
+    target_orientation : Tuple[str], optional
+        Target orientation of the image, by default ("R", "P", "S").
+    rotation_axes : Tuple[int], optional
+        Axis to rotate the image, by default (0, 1).
+    h_min : int, optional
+        Minimum height of the image, by default 0.
+    h_max : int, optional
+        Maximum height of the image, by default 512.
+    w_min : int, optional
+        Minimum width of the image, by default 0.
+    w_max : int, optional
+        Maximum width of the image, by default 512.
+
+    Returns
+    -------
+    int
+        Number of slices saved.
+    dict
+        Metadata for the slices.
+    """
+    patient_id = os.path.basename(patient_dir)
+    reorient = transforms.Orientation(target_orientation)
+
+    # Image and mask paths
+    image_path = os.path.join(patient_dir, "SEQ", f"CTport-{patient_id}.nii")
+    mask_paths = {
+        "pancreas": os.path.join(patient_dir, "SEG", f"Pancreas-{patient_id}.nii"),
+        "tumor": os.path.join(patient_dir, "SEG", f"Tumor-{patient_id}.nii"),
+        "arteries": os.path.join(patient_dir, "SEG", f"Arterias-{patient_id}.nii"),
+        "veins": os.path.join(patient_dir, "SEG", f"Venas-{patient_id}.nii"),
+    }
+
+    # Load the image and masks
+    image_nii = nib.load(image_path)
+    image, transform = reorient(image_nii) # Reorient the image
+
+    image = np.rot90(image, k=-1, axes=rotation_axes)   # Rotate the image
+    image = image[h_min:h_max, w_min:w_max, :]  # Apply cropping
+
+    masks = np.zeros_like(image)
+
+    # Combine the segmentation masks
+    for i, (_, mask_path) in enumerate(mask_paths.items(), start=1):
+        mask_nii = nib.load(mask_path)
+
+        # Ensure the number of slices match the image
+        if mask_nii.shape[2] != image.shape[2]:
+            mask_nii = resample_from_to(mask_nii, image_nii, order=0)
+        mask_data = mask_nii.get_fdata()
+
+        # Binarize the mask
+        mask_data = (mask_data > 0).astype(np.uint8)
+
+        # Apply orientation transformation
+        mask_data = apply_orientation(mask_data, transform)
+
+        # Rotate the mask
+        mask_data = np.rot90(mask_data, k=-1, axes=rotation_axes)
+
+        # Apply cropping
+        mask_data = mask_data[h_min:h_max, w_min:w_max, :]
+
+        # Class label assignment: 1 for pancreas, 2 for tumor...
+        masks[mask_data > 0] = i
+
+    num_slices = image.shape[2]
+
+    # Transpose the image and masks to (D, H, W)
+    image = np.transpose(image, (2, 0, 1))
+    masks = np.transpose(masks, (2, 0, 1))
+
+    # Saving directories
+    output_img_dir = os.path.join(output_dir, "images")
+    output_mask_dir = os.path.join(output_dir, "masks")
+    os.makedirs(output_img_dir, exist_ok=True)
+    os.makedirs(output_mask_dir, exist_ok=True)
+
+    metadata = {}   # Metadata for the slices
+
+    # Generate slices
+    for slice in range(num_slices):
+        image_slice = image[slice, ...]
+        mask_slice = masks[slice, ...]
+
+        img_filename = f"image_{patient_id}_{slice:03d}.npy"
+        mask_filename = f"mask_{patient_id}_{slice:03d}.png"
+
+        # Save the slice
+        image_save_path = os.path.join(output_img_dir, img_filename)
+        mask_save_path = os.path.join(output_mask_dir, mask_filename)
+
+        save_npy(image_slice, image_save_path)
+        save_png(mask_slice.astype(np.uint8), mask_save_path)
+
+        metadata[img_filename] = {
+            "patient_id": patient_id,
+            "slice_index": slice,
+            "mask_filename": mask_filename
+        }
+
+    return num_slices, metadata
 
 def apply_window(image, window_level, window_width):
     """

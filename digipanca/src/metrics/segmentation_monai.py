@@ -38,17 +38,17 @@ class SegmentationMonaiMetrics:
         
         # Check if the input is already one-hot encoded
         if is_one_hot(y_pred) and is_one_hot(y_true):
-            print("Both y_pred and y_true are already one-hot encoded.")
+            # print("Both y_pred and y_true are already one-hot encoded.")
             return y_pred, y_true
         
         # Check if the input is 2D or 3D
         if y_pred.dim() == 4 and y_true.dim() == 3: # 2D case
-            print("2D case")
+            # print("2D case")
             B, C, H, W = y_pred.shape
             n_classes = C
 
-            print(f"y_pred shape: {y_pred.shape}, y_true shape: {y_true.shape}")
-            print(f"y_pred values: {y_pred.unique()}")
+            # print(f"y_pred shape: {y_pred.shape}, y_true shape: {y_true.shape}")
+            # print(f"y_pred values: {y_pred.unique()}")
 
             # Convert y_pred to one-hot encoding
             y_pred_classes = torch.argmax(y_pred, dim=1, keepdim=True)
@@ -60,20 +60,20 @@ class SegmentationMonaiMetrics:
             y_true_one_hot.scatter_(1, y_true.unsqueeze(1).long(), 1)
 
             # Ensure y_true_one_hot values are within the valid range of class indices
-            print(f"y_true_one_hot shape: {y_true_one_hot.shape}, y_pred_one_hot shape: {y_pred_one_hot.shape}")
-            print(f"y_true values: {y_true.unique()}")
-            print(f"y_true_one_hot values: {y_true_one_hot.unique()}")
-            print(f"y_pred_one_hot values: {y_pred_one_hot.unique()}")
+            # print(f"y_true_one_hot shape: {y_true_one_hot.shape}, y_pred_one_hot shape: {y_pred_one_hot.shape}")
+            # print(f"y_true values: {y_true.unique()}")
+            # print(f"y_true_one_hot values: {y_true_one_hot.unique()}")
+            # print(f"y_pred_one_hot values: {y_pred_one_hot.unique()}")
 
             return y_pred_one_hot, y_true_one_hot
         
         elif y_pred.dim() == 5 and y_true.dim() == 4:   # 3D case
-            print("3D case")
+            # print("3D case")
             B, C, D, H, W = y_pred.shape
             n_classes = C
 
-            print(f"y_pred shape: {y_pred.shape}, y_true shape: {y_true.shape}")
-            print(f"y_pred values: {y_pred.unique()}")
+            # print(f"y_pred shape: {y_pred.shape}, y_true shape: {y_true.shape}")
+            # print(f"y_pred values: {y_pred.unique()}")
 
             # Convert y_pred to one-hot encoding
             y_pred_classes = torch.argmax(y_pred, dim=1, keepdim=True)
@@ -84,10 +84,10 @@ class SegmentationMonaiMetrics:
             y_true_one_hot = torch.zeros(B, n_classes, D, H, W, device=y_true.device)
             y_true_one_hot.scatter_(1, y_true.unsqueeze(1).long(), 1)
 
-            print(f"y_true_one_hot shape: {y_true_one_hot.shape}, y_pred_one_hot shape: {y_pred_one_hot.shape}")
-            print(f"y_true values: {y_true.unique()}")
-            print(f"y_true_one_hot values: {y_true_one_hot.unique()}")
-            print(f"y_pred_one_hot values: {y_pred_one_hot.unique()}")
+            # print(f"y_true_one_hot shape: {y_true_one_hot.shape}, y_pred_one_hot shape: {y_pred_one_hot.shape}")
+            # print(f"y_true values: {y_true.unique()}")
+            # print(f"y_true_one_hot values: {y_true_one_hot.unique()}")
+            # print(f"y_pred_one_hot values: {y_pred_one_hot.unique()}")
 
             return y_pred_one_hot, y_true_one_hot
 

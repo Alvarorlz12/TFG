@@ -39,7 +39,7 @@ class SegmentationMetrics:
                 device=y_true.device
             )
             y_true_one_hot.scatter_(1, y_true.unsqueeze(1), 1)
-            print("if")
+            # print("if")
         else:
             # If already in form [B, C, H, W] (logits or one-hot)
             if y_pred.dim() == 4 and y_true.dim() == 3:
@@ -52,13 +52,13 @@ class SegmentationMetrics:
                     device=y_true.device
                 )
                 y_true_one_hot.scatter_(1, y_true.unsqueeze(1), 1)
-                print("else if")
+                # print("else if")
             else:
                 # Assume both are already in proper format
                 y_pred_one_hot = y_pred
                 y_true_one_hot = y_true
                 n_classes = y_pred.size(1)
-                print("else")
+                # print("else")
         
         # Calculate dice for each class
         dice_scores = []

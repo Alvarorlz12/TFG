@@ -20,4 +20,4 @@ TIMESTAMP=$(date +%Y%m%d-%H%M%S)    # Fecha y hora actual
 sed -e "s/EXPERIMENT_NAME/${EXPERIMENT_NAME}/g" \
     -e "s/CONFIG_NAME/${CONFIG_NAME}/g" \
     -e "s/PART/${PARTITION}/g" \
-    slurm/scripts/train_template.sh | sbatch --output=slurm/out/${EXPERIMENT_NAME}_${TIMESTAMP}.out
+    slurm/scripts/train_template.sh | sbatch --output=slurm/out/${EXPERIMENT_NAME}_${TIMESTAMP}_%j.out
