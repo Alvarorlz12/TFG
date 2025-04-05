@@ -4,189 +4,23 @@ import argparse
 import torch
 import json
 import torch
-import random
-import numpy as np
 
 from pathlib import Path
 from torch.utils.data import DataLoader
-from monai.networks.nets import UNet as MONAIUNet
-from monai.losses import DiceLoss as MONAIDiceLoss
-from monai.networks.layers import Norm
 from datetime import datetime
 
 from src.utils.config import load_config
-from src.data.augmentation import build_augmentations_from_config
-from src.data.transforms import build_transforms_from_config
-from src.models import UNet, CustomDeepLabV3, UNet3D
-from src.losses import MulticlassDiceLoss, CombinedLoss, FocalLoss, WeightedDiceLoss, DiceFocalLoss
-from src.data.dataset2d import PancreasDataset2D
-from src.data.dataset3d import PancreasDataset3D
 from src.training.trainer import Trainer, _SUMMARY
 from src.utils.logger import Logger
 from src.utils.notifier import Notifier
-
-#region AUXILIARY FUNCTIONS
-def set_seed(seed):
-    """Set random seed for reproducibility."""
-    random.seed(seed)
-    np.random.seed(seed)
-    torch.manual_seed(seed)
-    if torch.cuda.is_available():
-        torch.cuda.manual_seed_all(seed)
-        torch.backends.cudnn.deterministic = True
-        torch.backends.cudnn.benchmark = False
-
-def get_transform(config):
-    """Initialize transforms based on configuration."""
-    transform_config = config.get('transforms', None)
-    return build_transforms_from_config(transform_config)
-
-def get_augment(config):
-    """Initialize augmentations based on configuration."""
-    augment_config = config.get('augmentations', None)
-    return build_augmentations_from_config(augment_config)
-
-def get_dataset(config, split_type='train', transform=None, augment=None):
-    """Initialize dataset based on configuration.
-    
-    Parameters
-    ----------
-    config : dict
-        Configuration dictionary.
-    split_type : str, optional
-        Split type (train/val/test), by default 'train'.
-    transform : callable, optional
-        Transform function, by default None.
-    augment : callable, optional
-        Augmentation function, by default None.
-
-    Returns
-    -------
-    PancreasDataset or PancreasDataset3D
-        Pancreas dataset object.
-    """
-    # Check that there is not augmentation for validation/test sets
-    if split_type != 'train' and augment is not None:
-        raise ValueError("Augmentations are only allowed for the training set.")
-    # Ensure split type is valid
-    if split_type not in ['train', 'val', 'test']:
-        raise ValueError(f"Invalid split type: {split_type}")
-    
-    data_dir = os.path.join(config['data']['processed_dir'], split_type)
-    if config['data'].get('is_3d', False):
-        return PancreasDataset3D(
-            data_dir=data_dir,
-            transform=transform,
-            load_into_memory=config['data'].get('load_into_memory', False)
-        )
-    else:
-        return PancreasDataset2D(
-            data_dir=data_dir,
-            transform=transform,
-            augment=augment,
-            load_into_memory=config['data'].get('load_into_memory', False),
-        )
-
-def get_model(config):
-    """Initialize model based on configuration."""
-    model_type = config['model']['type']
-    
-    if model_type == 'unet':
-        if config['model'].get('use_monai', False):
-            # Using MONAI UNet
-            return MONAIUNet(
-                spatial_dims=2,  # 2D images
-                in_channels=config['model']['in_channels'],
-                out_channels=config['model']['out_channels'],
-                channels=config['model'].get('channels', [16, 32, 64, 128, 256]),
-                strides=config['model'].get('strides', [2, 2, 2, 2]),
-                num_res_units=config['model'].get('num_res_units', 2),
-                dropout=config['model'].get('dropout_rate', 0.0),
-                norm=Norm.BATCH
-            )
-        else:
-            return UNet(
-                in_channels=config['model']['in_channels'],
-                out_channels=config['model']['out_channels'],
-                init_features=config['model']['init_features']
-            )
-    elif model_type == 'deeplabv3':
-        return CustomDeepLabV3(
-            num_classes=config['model']['num_classes'],
-            dropout_rate=config['model']['dropout_rate'],
-            pretrained=config['model']['pretrained']
-        )
-    elif model_type == 'unet3d':
-        if config['model'].get('use_monai', False):
-            return MONAIUNet(
-                spatial_dims=3,
-                in_channels=config['model']['in_channels'],
-                out_channels=config['model']['out_channels'],
-                channels=[64, 128, 256, 512],
-                strides=[2, 2, 2],
-                num_res_units=3,
-                norm=Norm.BATCH
-            )
-        else:
-            return UNet3D(
-                in_channels=config['model']['in_channels'],
-                out_channels=config['model']['out_channels'],
-                base_channels=config['model']['base_channels']
-            )
-    else:
-        raise ValueError(f"Unsupported model type: {model_type}")
-
-def get_loss_fn(config):
-    """Initialize loss function based on configuration."""
-    loss_type = config['training']['loss_function']
-
-    if loss_type == 'MulticlassDiceLoss':
-        if config['training'].get('use_monai_loss', False):
-            monai_config = config['training']['loss_params']
-            # MONAI DiceLoss
-            return MONAIDiceLoss(
-                to_onehot_y=monai_config.get('to_onehot_y', False),
-                softmax=monai_config.get('softmax', False),
-                include_background=monai_config.get('include_background', False),
-                reduction=monai_config.get('reduction', 'mean'),
-            )
-        else:
-            return MulticlassDiceLoss()
-    elif loss_type == 'CombinedLoss':
-        weights = config['training']['loss_params'].get('weights', None)
-        if weights is not None:
-            device = torch.device(
-                config["training"]["device"] if torch.cuda.is_available() else "cpu"
-            )
-            weights = torch.tensor(weights).to(device)
-        return CombinedLoss(
-            alpha=config['training']['loss_params']['alpha'],
-            beta=config['training']['loss_params']['beta'],
-            class_weights=weights
-        )
-    elif loss_type == 'FocalLoss':
-        return FocalLoss(
-            gamma=config['training']['loss_params']['gamma'],
-            reduction=config['training']['loss_params']['reduction']
-        )
-    elif loss_type == 'WeightedDiceLoss':
-        return WeightedDiceLoss(
-            num_classes=config['training']['loss_params']['num_classes'],
-            include_background=config['training']['loss_params']['include_background'],
-            reduction=config['training']['loss_params']['reduction']
-        )
-    elif loss_type == 'DiceFocalLoss':
-        return DiceFocalLoss(
-            include_background=config['training']['loss_params'].get('include_background', False),
-            gamma=config['training']['loss_params']['gamma'],
-            reduction=config['training']['loss_params']['reduction'],
-            lambda_dice=config['training']['loss_params'].get('lambda_dice', 1.0),
-            lambda_focal=config['training']['loss_params'].get('lambda_focal', 1.0),
-            alpha=config['training']['loss_params'].get('alpha', None)
-        )
-    else:
-        raise ValueError(f"Unsupported loss function: {loss_type}")
-#endregion
+from src.training.setup import (
+    get_model,
+    get_loss_fn,
+    get_dataset,
+    get_transforms,
+    get_augment
+)
+from src.training.utils import set_seed
 
 #region MAIN
 def main():
@@ -245,7 +79,7 @@ def main():
     logger = Logger(log_dir=f"{experiment_dir}/logs", verbosity="INFO")
 
     # Load transforms and augmentations
-    transform = get_transform(config)
+    transform = get_transforms(config)
     augment = get_augment(config)
     
     # Create dataset and data loaders

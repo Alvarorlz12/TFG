@@ -3,8 +3,9 @@ import torch.nn as nn
 import torch.nn.functional as F
 from monai.losses import DiceLoss as MONAIDiceLoss
 from monai.losses import DiceFocalLoss as MONAIDiceFocalLoss
+from monai.losses import DiceCELoss as MONAIDiceCELoss
 
-#region Multiclass Dice Loss
+#region MulticlassDiceLoss
 class MulticlassDiceLoss(nn.Module):
     """Dice Loss for multiple classes."""
 
@@ -85,7 +86,7 @@ class MulticlassDiceLoss(nn.Module):
         return dice_loss / (num_classes - start_class)
 #endregion
 
-#region Weighted Dice Loss
+#region WeightedDiceLoss
 class WeightedDiceLoss(nn.Module):
     def __init__(self, num_classes, include_background=True, reduction="mean"):
         super(WeightedDiceLoss, self).__init__()
@@ -118,7 +119,7 @@ class WeightedDiceLoss(nn.Module):
         return (loss * weights).sum()
 #endregion
 
-#region Dice Focal Loss
+#region DiceFocalLoss
 class DiceFocalLoss(nn.Module):
     def __init__(
         self,
@@ -189,3 +190,70 @@ class DiceFocalLoss(nn.Module):
             ).permute(0, 4, 1, 2, 3).float()
 
         return self.monai_dice_focal(y_pred, y_true)
+#endregion
+
+#region DiceCELoss
+
+class DiceCELoss(nn.Module):
+    def __init__(
+        self,
+        include_background=True,
+        reduction='mean',
+        lambda_dice=1.0,
+        lambda_ce=1.0,
+    ):
+        """
+        Dice Cross Entropy Loss implementation using MONAI's DiceCELoss.
+
+        Parameters
+        ----------
+        include_background : bool, optional
+            Whether to include the background class.
+        reduction : str, optional
+            Reduction method for the loss. Default is 'mean'.
+        lambda_dice : float, optional
+            Weight for the Dice loss.
+        lambda_ce : float, optional
+            Weight for the Cross Entropy loss.
+        """
+        super(DiceCELoss, self).__init__()
+        self.monai_dice_ce = MONAIDiceCELoss(
+            include_background=include_background,
+            reduction=reduction,
+            lambda_dice=lambda_dice,
+            lambda_ce=lambda_ce,
+            softmax=True  # Assume y_pred is logits
+        )
+
+    def forward(self, y_pred, y_true):
+        """
+        Compute the Dice Cross Entropy Loss.
+
+        Parameters
+        ----------
+        y_pred : torch.Tensor
+            The model's predictions.
+        y_true : torch.Tensor
+            The ground truth labels.
+
+        Returns
+        -------
+        torch.Tensor
+            The computed Dice Cross Entropy Loss.
+        """
+        num_classes = y_pred.shape[1]
+
+        # Convert y_true to one-hot encoding if necessary
+        if y_true.dim() == 3:   # 2D: (B, H, W) → (B, C, H, W)
+            y_true = F.one_hot(
+                y_true.long(),
+                num_classes=num_classes
+            ).permute(0, 3, 1, 2).float()
+        elif y_true.dim() == 4: # 3D: (B, D, H, W) → (B, C, D, H, W)
+            y_true = F.one_hot(
+                y_true.long(),
+                num_classes=num_classes
+            ).permute(0, 4, 1, 2, 3).float()
+
+        return self.monai_dice_ce(y_pred, y_true)
+#endregion

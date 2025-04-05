@@ -31,11 +31,16 @@ training:
   num_epochs: 2
   learning_rate: 0.0001
   weight_decay: 0.00001
-  # DiceFocalLoss
-  loss_function: "DiceFocalLoss"
+  # DiceCELoss
+  loss_function: "DiceCELoss"
   loss_params:
-    gamma: 2.0
+    include_background: True
     reduction: "mean"
+  # # DiceFocalLoss
+  # loss_function: "DiceFocalLoss"
+  # loss_params:
+  #   gamma: 2.0
+  #   reduction: "mean"
     include_background: True
   # # Weighted Dice Loss
   # loss_function: "WeightedDiceLoss"
