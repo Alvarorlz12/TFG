@@ -1,0 +1,66 @@
+name: "deep_aug"
+description: "DeepLabV3 with T&A, DiceCELoss, RoI focus and bs=8"
+
+data:
+  root_dir: "data"  # Root directory of the dataset
+  raw_dir: "raw"  # Directory containing the raw data
+  processed_dir: "processed/2d"  # Directory for processed data
+  split_path: "splits/train_val_split.json"
+  num_classes: 5  # Background, Pancreas, Tumor, Arteries, Veins
+  input_size: [512, 512]  # Images size
+  num_workers: 2  # Number of workers to use in the DataLoader
+  batch_size: 8  # Number of samples in each batch
+
+transforms:
+  - CropROI:
+      w_min: 156
+      w_max: 412
+      h_min: 124
+      h_max: 380
+  - ApplyWindow:
+      window_level: 50
+      window_width: 400
+  - Normalize: {}
+  - Resize:
+      size: [256, 256]
+  - ToTensor: {}
+
+augmentations:
+  - Affine:
+      scale: [0.95, 1.05]
+      translate_percent: [0.02, 0.02]
+      rotate: [-10, 10]
+      p: 0.2
+  - RandomBrightnessContrast:
+      brightness_limit: 0.2
+      contrast_limit: 0.2
+      p: 0.3
+  - GaussianBlur:
+      blur_limit: [3, 7]
+      p: 0.3
+  - ElasticTransform:
+      alpha: 1.0
+      sigma: 50
+      p: 0.3
+  - GridDistortion:
+      num_steps: 5
+      distort_limit: 0.3
+      p: 0.3
+  - ToTensorV2: {}
+
+model:
+  type: deeplabv3
+  num_classes: 5
+  dropout_rate: 0.2
+  pretrained: True
+
+training:
+  num_epochs: 100
+  learning_rate: 0.0001
+  weight_decay: 0.00001
+  loss_function: "DiceCELoss"
+  loss_params:
+    include_background: True
+    reduction: "mean"
+  device: "cuda"
+  patience: 15
