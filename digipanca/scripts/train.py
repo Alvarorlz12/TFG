@@ -38,6 +38,10 @@ def main():
                         help='Send notification to Telegram and save results in Google Sheets')
     parser.add_argument('--only_save', action='store_true',
                         help='Only save results in Google Sheets')
+    parser.add_argument('--resume', action='store_true',
+                        help='Resume training from a previous checkpoint (defined in config or CLI)')
+    parser.add_argument('--resume_from', type=str, default=None,
+                        help='Path to specific checkpoint to resume from (overrides config)')
     args = parser.parse_args()
 
     # Start time
@@ -55,6 +59,9 @@ def main():
     
     # Load configuration
     config = load_config(args.config)
+
+    # Resume training if specified
+    resume_path = args.resume_from or config['training'].get('checkpoint_path', None)
 
     # Set random seed for reproducibility
     seed = config['training'].get('seed', 42)
@@ -136,7 +143,8 @@ def main():
         config=config['training'],
         experiment_dir=experiment_dir,
         logger=logger,
-        notifier=notifier
+        notifier=notifier,
+        checkpoint_path=resume_path if args.resume else None
     )
 
     # Update summary for notifier
@@ -155,6 +163,9 @@ def main():
         (' \\(MONAI\\)' if config['training'].get('use_monai_loss', False) else ''),
         'experiment_dir': str(experiment_dir)
     })
+
+    if resume_path is not None:
+        _SUMMARY['resume_path'] = resume_path
 
     # Notify training start if enabled
     if args.notify and not args.only_save:

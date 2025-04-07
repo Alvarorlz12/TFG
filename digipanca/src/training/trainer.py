@@ -4,15 +4,16 @@ import torch
 import json
 from tqdm import tqdm
 
-from src.utils.logger import Logger
 from src.training.callbacks import ModelCheckpoint, EarlyStopping
 from src.metrics.segmentation import SegmentationMetrics
+from src.utils.checkpoints import load_checkpoint
 
 _SUMMARY = {}
 
 class Trainer:
     def __init__(self, model, loss_fn, optimizer, train_loader, val_loader,
-                 config, experiment_dir, logger=None, notifier=None):
+                 config, experiment_dir, logger=None, notifier=None,
+                 checkpoint_path=None):
         """
         Initialize the trainer with the model, loss function, optimizer, 
         data loaders, and configuration.
@@ -37,6 +38,9 @@ class Trainer:
             Logger for logging the training metrics.
         notifier : Notifier, optional
             Notifier for sending messages to Telegram.
+        checkpoint_path : str, optional
+            Path to the checkpoint file to load the model from. If None,
+            the model is trained from scratch.
         """
         self.device = torch.device(config["device"] if torch.cuda.is_available() else "cpu")
         self.model = model.to(self.device)
@@ -72,6 +76,12 @@ class Trainer:
         if not os.path.exists(self.metrics_file):
             with open(self.metrics_file, "w") as f:
                 json.dump({"train": [], "val": []}, f, indent=4)
+
+        # Load checkpoint if provided
+        self.start_epoch = 0
+        if checkpoint_path and os.path.exists(checkpoint_path):
+            print(f"🔁 Resuming from checkpoint: {checkpoint_path}")
+            self.start_epoch, _ = load_checkpoint(self.model, self.optimizer, checkpoint_path)
 
     def _save_metrics(self, epoch, train_loss, val_loss, train_metrics, 
                       val_metrics, is_best=False):
@@ -260,8 +270,13 @@ class Trainer:
         Train the model for the specified number of epochs and return the
         training and validation losses.
         """
-        loop = tqdm(range(self.num_epochs), colour="red")
-        loop.set_description(f"Epoch [0/{self.num_epochs}]")
+        loop = tqdm(
+            range(self.start_epoch, self.num_epochs),
+            colour="red",
+            initial=self.start_epoch,
+            total=self.num_epochs    
+        )
+        loop.set_description(f"Epoch [{self.start_epoch}/{self.num_epochs}]")
         loop.set_postfix(train_loss="N/A", valid_loss="N/A",train_dice="N/A", valid_dice="N/A")
 
         start_time = time.time()

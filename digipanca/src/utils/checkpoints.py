@@ -1,5 +1,6 @@
 import os
 import torch
+
 from tqdm import tqdm
 
 def save_checkpoint(model, optimizer, epoch, loss, checkpoint_dir="checkpoints",
@@ -37,7 +38,7 @@ def save_checkpoint(model, optimizer, epoch, loss, checkpoint_dir="checkpoints",
         "model": model.state_dict(),
         "optimizer": optimizer.state_dict(),
         "epoch": epoch,
-        "loss": loss,
+        "loss": loss
     }
     torch.save(checkpoint, checkpoint_path)
     tqdm.write(f"Saved checkpoint: {checkpoint_path}")
@@ -66,8 +67,12 @@ def load_checkpoint(model, optimizer, checkpoint_path):
         raise FileNotFoundError(f"Checkpoint file not found: {checkpoint_path}")
     
     checkpoint = torch.load(checkpoint_path)
-    model.load_state_dict(checkpoint["model"])
+    # model.load_state_dict(checkpoint["model"])
+    model.load_state_dict(
+        {k: v for k, v in checkpoint["model"].items() if "aux_classifier" not in k},
+        strict=False
+    )
     optimizer.load_state_dict(checkpoint["optimizer"])
-    print(f"Loaded checkpoint: {checkpoint_path}")
+    # print(f"Loaded checkpoint: {checkpoint_path}")
 
     return checkpoint["epoch"], checkpoint["loss"]

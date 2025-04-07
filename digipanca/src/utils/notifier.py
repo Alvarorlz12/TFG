@@ -3,6 +3,7 @@ import requests
 import json
 import gspread
 
+from pathlib import Path
 from oauth2client.service_account import ServiceAccountCredentials
 from datetime import datetime, timedelta
 
@@ -135,9 +136,18 @@ class Notifier:
         if self.only_save:
             return
         config_file = os.path.basename(summary["config_file"]).replace(".yaml", "")
+        resume_path = summary.get("resume_path", None)
+
+        if resume_path is not None:
+            resume_path = Path(resume_path).parent.parent.name
+            resume_path = f"🔁 *Resume from:* `{resume_path}`\n"
+        else:
+            resume_path = ""
+
         message = (
             f"🚀 *TRAINING STARTED* 🚀\n"
             f"📌 *Experiment:* `{summary['experiment']}`\n"
+            f"{resume_path}"
             f"📝 *Description:* `{summary['description']}`\n"
             f"⚙️ *Configuration:* `{config_file}`\n"
             f"   🔹 *Model:* `{self._escape_markdown(summary['model_type'])}`\n"

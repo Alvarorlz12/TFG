@@ -21,3 +21,16 @@ def set_seed(seed=42, deterministic=True):
         torch.cuda.manual_seed_all(seed)
         torch.backends.cudnn.deterministic = deterministic
         torch.backends.cudnn.benchmark = not deterministic
+
+def worker_init_fn(worker_id):
+    """
+    Worker initialization function for DataLoader.
+    
+    Parameters
+    ----------
+    worker_id : int
+        The ID of the worker process.
+    """
+    worker_seed = (torch.initial_seed() + worker_id) % 2**32
+    np.random.seed(worker_seed)
+    random.seed(worker_seed)
