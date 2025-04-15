@@ -186,7 +186,7 @@ def main():
     )
 
     # Visualize model predictions
-    visualize_model_predictions(model, val_loader, device)
+    visualize_model_predictions(model, val_loader, device, num_images=10)
 
 if __name__ == '__main__':
     main()

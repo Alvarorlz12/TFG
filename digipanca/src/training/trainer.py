@@ -6,6 +6,7 @@ from tqdm import tqdm
 
 from src.training.callbacks import ModelCheckpoint, EarlyStopping
 from src.metrics.segmentation import SegmentationMetrics
+from src.metrics.sma import SegmentationMetricsAccumulator as SMA
 from src.utils.checkpoints import load_checkpoint
 
 _SUMMARY = {}
@@ -52,7 +53,8 @@ class Trainer:
         self.checkpoint_dir = os.path.join(experiment_dir, "checkpoints")
         self.metrics_dir = os.path.join(experiment_dir, "metrics")
         self.logger = logger
-        self.metrics = SegmentationMetrics()
+        # self.metrics = SegmentationMetrics()
+        self.metrics = SMA(zero_division="nan")
         self.notifier = notifier
 
         # Callbacks
@@ -173,10 +175,12 @@ class Trainer:
             self.optimizer.step()
 
             train_loss += loss.item()
-            batch_metrics = self.metrics.all_metrics(outputs.detach(), masks)
+            self.metrics.update(outputs.detach(), masks)
+            batch_metrics = self.metrics.aggregate()
+            # batch_metrics = self.metrics.all_metrics(outputs.detach(), masks)
 
-            for key, value in batch_metrics.items():
-                all_metrics[key] = all_metrics.get(key, 0) + value
+            # for key, value in batch_metrics.items():
+            #     all_metrics[key] = all_metrics.get(key, 0) + value
 
             if self.logger:
                 self.logger.log(
@@ -193,8 +197,10 @@ class Trainer:
             del images, masks, outputs, loss
             torch.cuda.empty_cache()
             
+        all_metrics = self.metrics.aggregate()
+        self.metrics.reset()
         train_metrics = {
-            k: v / len(self.train_loader) for k, v in all_metrics.items()
+            k: v for k, v in all_metrics.items()
         }
         avg_loss = train_loss / len(self.train_loader)
         return avg_loss, train_metrics
@@ -242,10 +248,12 @@ class Trainer:
                     loss = loss[0]  # Use only the first loss
 
                 val_loss += loss.item()
-                batch_metrics = self.metrics.all_metrics(outputs, masks)
+                self.metrics.update(outputs, masks)
+                batch_metrics = self.metrics.aggregate()
+                # batch_metrics = self.metrics.all_metrics(outputs, masks)
 
-                for key, value in batch_metrics.items():
-                    all_metrics[key] = all_metrics.get(key, 0) + value
+                # for key, value in batch_metrics.items():
+                #     all_metrics[key] = all_metrics.get(key, 0) + value
 
                 if self.logger:
                     self.logger.log(
@@ -259,8 +267,10 @@ class Trainer:
                 del images, masks, outputs, loss
                 torch.cuda.empty_cache()
 
+        all_metrics = self.metrics.aggregate()
+        self.metrics.reset()
         val_metrics = {
-            k: v / len(self.val_loader) for k, v in all_metrics.items()
+            k: v for k, v in all_metrics.items()
         }
         avg_loss = val_loss / len(self.val_loader)
         return avg_loss, val_metrics
