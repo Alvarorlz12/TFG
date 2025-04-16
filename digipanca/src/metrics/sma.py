@@ -92,6 +92,44 @@ class SegmentationMetricsAccumulator:
         self.smooth_factor = smooth_factor
         self.reset()
 
+    def _handle_zero_division(self, value_tensor, mask):
+        # If there are no absent classes, return the original tensor
+        if mask.sum() == 0:
+            return value_tensor
+        # Handle zero division cases
+        if self.zero_division_method == "nan":
+            value_tensor[mask] = float("nan")
+        elif self.zero_division_method == "one":
+            value_tensor[mask] = 1.0
+        elif self.zero_division_method == "zero":
+            value_tensor[mask] = 0.0
+        return value_tensor
+    
+    @staticmethod
+    def _get_metrics(dice_scores, iou_scores, precision_scores, recall_scores):
+        C = dice_scores.shape[1]  # Number of classes
+
+        # Calculate means excluding NaNs
+        dice = torch.nanmean(dice_scores, dim=0)
+        iou = torch.nanmean(iou_scores, dim=0)
+        precision = torch.nanmean(precision_scores, dim=0)
+        recall = torch.nanmean(recall_scores, dim=0)
+
+        metrics = {
+            f"dice_class_{i}": dice[i].item() for i in range(C)
+        }
+        metrics.update({f"iou_class_{i}": iou[i].item() for i in range(C)})
+        metrics.update({f"precision_class_{i}": precision[i].item() for i in range(C)})
+        metrics.update({f"recall_class_{i}": recall[i].item() for i in range(C)})
+
+        # Calculate means excluding NaNs
+        metrics["dice"] = torch.nanmean(dice).item()
+        metrics["iou"] = torch.nanmean(iou).item()
+        metrics["precision"] = torch.nanmean(precision).item()
+        metrics["recall"] = torch.nanmean(recall).item()
+
+        return metrics
+
     def reset(self):
         """Reset the metrics accumulator."""
         self.dice_scores = None
@@ -244,28 +282,27 @@ class SegmentationMetricsAccumulator:
         """
         # Ensure y_pred and y_true are one-hot encoded
         y_pred_oh, y_true_oh = convert_to_one_hot(y_pred, y_true)
+        # Mask for absent classes (both prediction and ground truth are zero)
         dims = tuple(range(2, y_pred_oh.ndim))
+        mask = torch.sum(y_pred_oh + y_true_oh, dim=dims) == 0
 
         # Compute true positives, false positives, and false negatives
-        tp, fp, fn, tn = self.compute_tp_fp_fn_tn(y_pred_oh, y_true_oh)
+        tp, fp, fn, _ = self.compute_tp_fp_fn_tn(y_pred_oh, y_true_oh)
 
         # Compute dice
         dice = 2. * tp / (2. * tp + fp + fn + self.smooth_factor)
-        mask = (tp + fp + fn) == 0
         dice = self._handle_zero_division(dice, mask)
 
         # Compute IoU
         iou = tp / (tp + fp + fn + self.smooth_factor)
-        iou = self._handle_zero_division(iou, mask) # IoU mask == Dice mask
+        iou = self._handle_zero_division(iou, mask)
 
         # Compute precision
         precision = tp / (tp + fp + self.smooth_factor)
-        mask = (tp + fp) == 0
         precision = self._handle_zero_division(precision, mask)
 
         # Compute recall
         recall = tp / (tp + fn + self.smooth_factor)
-        mask = (tp + fn) == 0
         recall = self._handle_zero_division(recall, mask)
 
         # Store the results
@@ -280,39 +317,22 @@ class SegmentationMetricsAccumulator:
             self.precision_scores = torch.cat((self.precision_scores, precision), dim=0)
             self.recall_scores = torch.cat((self.recall_scores, recall), dim=0)
 
-    def _handle_zero_division(self, value_tensor, mask):
-        # If there are no absent classes, return the original tensor
-        if mask.sum() == 0:
-            return value_tensor
-        # Handle zero division cases
-        if self.zero_division_method == "nan":
-            value_tensor[mask] = float("nan")
-        elif self.zero_division_method == "one":
-            value_tensor[mask] = 1.0
-        elif self.zero_division_method == "zero":
-            value_tensor[mask] = 0.0
-        return value_tensor
+        return SegmentationMetricsAccumulator._get_metrics(
+            dice, iou, precision, recall
+        )
 
     def aggregate(self):
-        C = self.dice_scores.shape[1]  # Number of classes
-
-        # Calculate means excluding NaNs
-        dice = torch.nanmean(self.dice_scores, dim=0)
-        iou = torch.nanmean(self.iou_scores, dim=0)
-        precision = torch.nanmean(self.precision_scores, dim=0)
-        recall = torch.nanmean(self.recall_scores, dim=0)
-
-        metrics = {
-            f"dice_class_{i}": dice[i].item() for i in range(C)
-        }
-        metrics.update({f"iou_class_{i}": iou[i].item() for i in range(C)})
-        metrics.update({f"precision_class_{i}": precision[i].item() for i in range(C)})
-        metrics.update({f"recall_class_{i}": recall[i].item() for i in range(C)})
-
-        # Calculate means excluding NaNs
-        metrics["dice"] = torch.nanmean(dice).item()
-        metrics["iou"] = torch.nanmean(iou).item()
-        metrics["precision"] = torch.nanmean(precision).item()
-        metrics["recall"] = torch.nanmean(recall).item()
-
-        return metrics
+        """
+        Aggregate the metrics across all batches and classes.
+            
+        Returns
+        -------
+        dict
+            A dictionary containing the aggregated metrics.
+        """
+        return SegmentationMetricsAccumulator._get_metrics(
+            self.dice_scores,
+            self.iou_scores,
+            self.precision_scores,
+            self.recall_scores
+        )

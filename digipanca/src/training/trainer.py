@@ -175,12 +175,7 @@ class Trainer:
             self.optimizer.step()
 
             train_loss += loss.item()
-            self.metrics.update(outputs.detach(), masks)
-            batch_metrics = self.metrics.aggregate()
-            # batch_metrics = self.metrics.all_metrics(outputs.detach(), masks)
-
-            # for key, value in batch_metrics.items():
-            #     all_metrics[key] = all_metrics.get(key, 0) + value
+            batch_metrics = self.metrics.update(outputs.detach(), masks)
 
             if self.logger:
                 self.logger.log(
@@ -248,12 +243,7 @@ class Trainer:
                     loss = loss[0]  # Use only the first loss
 
                 val_loss += loss.item()
-                self.metrics.update(outputs, masks)
-                batch_metrics = self.metrics.aggregate()
-                # batch_metrics = self.metrics.all_metrics(outputs, masks)
-
-                # for key, value in batch_metrics.items():
-                #     all_metrics[key] = all_metrics.get(key, 0) + value
+                batch_metrics = self.metrics.update(outputs, masks)
 
                 if self.logger:
                     self.logger.log(
