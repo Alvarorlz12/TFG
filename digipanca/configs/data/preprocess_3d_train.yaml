@@ -1,6 +1,6 @@
 data:
   root_dir: "data"
-  raw_dir: "raw"
+  raw_dir: "raw/train"
   is_2d: false
   processed_dir: "processed/3d"
   subvolume_size: 64

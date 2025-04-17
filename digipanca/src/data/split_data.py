@@ -1,7 +1,7 @@
 import os
 import json
 import random
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split, KFold
 
 def create_train_test_split(
     sample_dirs,
@@ -89,3 +89,33 @@ def load_train_test_split(split_path="data/splits/train_test_split.json"):
     """
     with open(os.path.normpath(split_path), "r") as f:
         return json.load(f)
+    
+def create_kfold_split(
+    sample_dirs,
+    n_splits=5,
+    shuffle=True,
+    random_state=42,
+    split_dir="data/splits",
+    filename="kfold_split.json"
+):
+    """
+    Create a k-fold split for the samples. Save the split to a JSON file.
+    """
+    os.makedirs(split_dir, exist_ok=True)
+    split_path = os.path.normpath(os.path.join(split_dir, filename))
+
+    kf = KFold(n_splits=n_splits, shuffle=shuffle, random_state=random_state)
+    patient_ids = [os.path.basename(d) for d in sample_dirs]
+
+    kfold_splits = []
+    for train_idx, val_idx in kf.split(patient_ids):
+        train_ids = [patient_ids[i] for i in train_idx]
+        val_ids = [patient_ids[i] for i in val_idx]
+        kfold_splits.append({"train": train_ids, "val": val_ids})    
+
+    with open(split_path, "w") as f:
+        json.dump(kfold_splits, f, indent=4)
+
+    print(f"✅ K-fold split saved to {split_path}")
+
+    return kfold_splits

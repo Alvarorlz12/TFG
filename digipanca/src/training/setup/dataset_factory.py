@@ -1,17 +1,29 @@
 import os
+import json
 
 from src.data.dataset2d import PancreasDataset2D
 from src.data.dataset3d import PancreasDataset3D
 
-def get_dataset(config, split_type='train', transform=None, augment=None):
+def get_dataset(
+    config,
+    split_data,
+    split_type='train',
+    data_folder='train',
+    transform=None,
+    augment=None
+):
     """Initialize dataset based on configuration.
     
     Parameters
     ----------
     config : dict
         Configuration dictionary.
+    split_data : dict
+        Dictionary containing the split data.
     split_type : str, optional
         Split type (train/val/test), by default 'train'.
+    data_folder : str, optional
+        Data folder name, by default 'train'.
     transform : callable, optional
         Transform function, by default None.
     augment : callable, optional
@@ -29,12 +41,19 @@ def get_dataset(config, split_type='train', transform=None, augment=None):
     if split_type not in ['train', 'val', 'test']:
         raise ValueError(f"Invalid split type: {split_type}")
     
-    data_dir = os.path.join(config['data']['processed_dir'], split_type)
+    # Get the patient IDs for the specified split type
+    patient_ids = split_data.get(split_type, [])
+
+    # data_folder is the folder name in the processed directory
+    # e.g. 'train' or 'test'
+    data_dir = os.path.join(config['data']['processed_dir'], data_folder)
+
     if config['data'].get('is_3d', False):
         return PancreasDataset3D(
             data_dir=data_dir,
             transform=transform,
-            load_into_memory=config['data'].get('load_into_memory', False)
+            load_into_memory=config['data'].get('load_into_memory', False),
+            patient_ids=patient_ids
         )
     else:
         return PancreasDataset2D(
@@ -42,4 +61,5 @@ def get_dataset(config, split_type='train', transform=None, augment=None):
             transform=transform,
             augment=augment,
             load_into_memory=config['data'].get('load_into_memory', False),
+            patient_ids=patient_ids
         )

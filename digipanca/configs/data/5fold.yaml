@@ -1,0 +1,8 @@
+data:
+  root_dir: "data"
+  raw_dir: "raw/train"
+  split_file: "data/splits/kfold_cv.json"
+  num_classes: 5
+  shuffle: true
+  is_cv: true
+  n_splits: 5

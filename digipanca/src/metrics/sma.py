@@ -70,7 +70,12 @@ class SegmentationMetricsAccumulator:
     Class for computing segmentation metrics for pancreas segmentation.
     """
 
-    def __init__(self, zero_division="nan", smooth_factor=1e-12):
+    def __init__(
+            self,
+            zero_division="nan",
+            smooth_factor=1e-12,
+            include_background=True
+        ):
         """
         Parameters
         ----------
@@ -79,17 +84,16 @@ class SegmentationMetricsAccumulator:
         absent_class_strategy : str
             What to do when a class is absent in both prediction and ground truth.
             Options: "nan", "one", "zero"
+        smooth_factor : float, optional
+            Smoothing factor to avoid division by zero, by default 1e-12
+        include_background : bool, optional
+            Whether to include the background class in the metrics, by default True.
         """
         if zero_division not in ["nan", "one", "zero"]:
             raise ValueError("zero_division must be 'nan', 'one', or 'zero'")
-        if zero_division == "nan":
-            self.zero_division = float("nan")
-        elif zero_division == "one":
-            self.zero_division = 1.0
-        elif zero_division == "zero":
-            self.zero_division = 0.0
         self.zero_division_method = zero_division
         self.smooth_factor = smooth_factor
+        self.include_background = include_background
         self.reset()
 
     def _handle_zero_division(self, value_tensor, mask):
@@ -106,21 +110,32 @@ class SegmentationMetricsAccumulator:
         return value_tensor
     
     @staticmethod
-    def _get_metrics(dice_scores, iou_scores, precision_scores, recall_scores):
+    def _get_metrics(
+        dice_scores,
+        iou_scores,
+        precision_scores,
+        recall_scores,
+        include_background=True
+    ):
         C = dice_scores.shape[1]  # Number of classes
 
+        # Exclude background class if not needed
+        start_class = 0 if include_background else 1
+
         # Calculate means excluding NaNs
-        dice = torch.nanmean(dice_scores, dim=0)
-        iou = torch.nanmean(iou_scores, dim=0)
-        precision = torch.nanmean(precision_scores, dim=0)
-        recall = torch.nanmean(recall_scores, dim=0)
+        dice = torch.nanmean(dice_scores[:, start_class:], dim=0)
+        iou = torch.nanmean(iou_scores[:, start_class:], dim=0)
+        precision = torch.nanmean(precision_scores[:, start_class:], dim=0)
+        recall = torch.nanmean(recall_scores[:, start_class:], dim=0)
+
+        classes = range(start_class, C)
 
         metrics = {
-            f"dice_class_{i}": dice[i].item() for i in range(C)
+            f"dice_class_{i}": dice[i - start_class].item() for i in classes
         }
-        metrics.update({f"iou_class_{i}": iou[i].item() for i in range(C)})
-        metrics.update({f"precision_class_{i}": precision[i].item() for i in range(C)})
-        metrics.update({f"recall_class_{i}": recall[i].item() for i in range(C)})
+        metrics.update({f"iou_class_{i}": iou[i - start_class].item() for i in classes})
+        metrics.update({f"precision_class_{i}": precision[i - start_class].item() for i in classes})
+        metrics.update({f"recall_class_{i}": recall[i - start_class].item() for i in classes})
 
         # Calculate means excluding NaNs
         metrics["dice"] = torch.nanmean(dice).item()
@@ -318,7 +333,11 @@ class SegmentationMetricsAccumulator:
             self.recall_scores = torch.cat((self.recall_scores, recall), dim=0)
 
         return SegmentationMetricsAccumulator._get_metrics(
-            dice, iou, precision, recall
+            dice,
+            iou,
+            precision,
+            recall,
+            include_background=self.include_background
         )
 
     def aggregate(self):
@@ -334,5 +353,6 @@ class SegmentationMetricsAccumulator:
             self.dice_scores,
             self.iou_scores,
             self.precision_scores,
-            self.recall_scores
+            self.recall_scores,
+            include_background=self.include_background
         )

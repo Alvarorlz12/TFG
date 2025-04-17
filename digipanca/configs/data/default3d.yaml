@@ -1,6 +1,6 @@
 data:
   root_dir: "data"  # Root directory of the dataset
-  raw_dir: "raw"  # Directory containing the raw data
+  raw_dir: "raw/train"  # Directory containing the raw data
   processed_dir: "processed"  # Directory containing the processed data
   subvolume_size: 64
   subvolume_stride: 32

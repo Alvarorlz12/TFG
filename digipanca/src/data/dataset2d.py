@@ -16,7 +16,8 @@ class PancreasDataset2D(Dataset):
         data_dir,
         transform=None,
         augment=None,
-        load_into_memory=False
+        load_into_memory=False,
+        patient_ids=None
     ):
         """
         Initialize the Pancreas 2D dataset.
@@ -31,6 +32,8 @@ class PancreasDataset2D(Dataset):
             A function/transform to apply for data augmentation.
         load_into_memory : bool, optional
             Whether to load the entire dataset into memory, by default False.
+        patient_ids : list, optional
+            List of patient IDs to filter the dataset, by default None.
         """
         self.image_dir = os.path.join(data_dir, "images")
         self.mask_dir = os.path.join(data_dir, "masks")
@@ -41,6 +44,12 @@ class PancreasDataset2D(Dataset):
         metadata_path = os.path.join(data_dir, "metadata.json")
         with open(metadata_path, "r") as f:
             self.metadata = json.load(f)
+
+        # Filter metadata by patient IDs if provided
+        if patient_ids is not None:
+            self.metadata = {
+                k: v for k, v in self.metadata.items() if v["patient_id"] in patient_ids
+            }
 
         # Get the list of image filenames
         self.image_filenames = sorted(self.metadata.keys())

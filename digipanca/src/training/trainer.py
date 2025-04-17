@@ -54,7 +54,10 @@ class Trainer:
         self.metrics_dir = os.path.join(experiment_dir, "metrics")
         self.logger = logger
         # self.metrics = SegmentationMetrics()
-        self.metrics = SMA(zero_division="nan")
+        self.metrics = SMA(
+            zero_division="nan",
+            include_background=config['loss_params'].get("include_background", True)
+        )
         self.notifier = notifier
 
         # Callbacks

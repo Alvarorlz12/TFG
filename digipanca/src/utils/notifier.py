@@ -144,8 +144,11 @@ class Notifier:
         else:
             resume_path = ""
 
+        fi = summary['fold']
+        tf = summary['total_folds']
+
         message = (
-            f"🚀 *TRAINING STARTED* 🚀\n"
+            f"🚀 *TRAINING STARTED*  \\[{fi}/{tf}\\] 🚀\n"
             f"📌 *Experiment:* `{summary['experiment']}`\n"
             f"{resume_path}"
             f"📝 *Description:* `{summary['description']}`\n"
@@ -189,8 +192,11 @@ class Notifier:
         hours, rem = divmod(total_time, 3600)
         minutes, seconds = divmod(rem, 60)
 
+        fi = summary['fold']
+        tf = summary['total_folds']
+
         message = (
-            f"✅ *TRAINING COMPLETED* ✅ {early_stopping}\n"
+            f"✅ *TRAINING COMPLETED*  \\[{fi}/{tf}\\] ✅ {early_stopping}\n"
             f"📌 *Experiment:* `{summary['experiment']}`\n"
             f"📅 *End Time:* `{summary['end_time']}`\n"
             f"⏳ *Duration:* `{int(hours):0>2}:{int(minutes):0>2}:{seconds:05.2f}`\n"
@@ -209,6 +215,23 @@ class Notifier:
             f"      🔸 *Precision:* `{summary['best_model']['metrics'].get('precision', 'N/A'):.4f}`\n"
             f"      🔸 *Recall:* `{summary['best_model']['metrics'].get('recall', 'N/A'):.4f}`\n"
             f"🏁 *Epochs Completed:* `{completed_epochs}/{total_epochs}`\n"
+        )
+        self.send_message(message)
+
+    def send_average_message(self, summary):
+        """Send the average results of the experiment to Telegram."""
+        if self.only_save:
+            return
+        message = (
+            f"📊 *EXPERIMENT AVERAGE* 📊\n"
+            f"📌 *Experiment:* `{summary['experiment']}`\n"
+            f"   🔹 *Average Validation Loss:* `{summary['best_model']['loss']:.4f}`\n"
+            f"   🔹 *Average IoU Score:* `{summary['best_model']['metrics'].get('iou', 'N/A'):.4f}`\n"
+            f"   🔹 *Average Dice Coefficient:* `{summary['best_model']['metrics'].get('dice', 'N/A'):.4f}`\n"
+            f"      🟢 *Pancreas:* `{summary['best_model']['metrics'].get('dice_class_1', 'N/A'):.4f}`\n"
+            f"      🟣 *Tumor:* `{summary['best_model']['metrics'].get('dice_class_2', 'N/A'):.4f}`\n"
+            f"      🔴 *Arteries:* `{summary['best_model']['metrics'].get('dice_class_3', 'N/A'):.4f}`\n"
+            f"      🔵 *Veins:* `{summary['best_model']['metrics'].get('dice_class_4', 'N/A'):.4f}`\n"
         )
         self.send_message(message)
 
@@ -259,8 +282,11 @@ class Notifier:
             summary.get('completed_epochs', summary['epochs']),
             summary['epochs'],
             summary['best_model']['epoch'],
-            summary['train_loss'], summary['val_loss'], summary['train_metrics']['dice'],
-            summary['metrics']['dice'], summary['best_model']['loss'], 
+            summary['train_loss'],
+            summary['val_loss'],
+            summary['train_metrics']['dice'],
+            summary['metrics']['dice'],
+            summary['best_model']['loss'], 
             summary['best_model']['metrics'].get('dice', 'N/A'),
             summary['best_model']['metrics'].get('dice_class_0', 'N/A'),
             summary['best_model']['metrics'].get('dice_class_1', 'N/A'),

@@ -4,7 +4,7 @@ description: "DeepLabV3 with RandomCrop and no BorderCrop"
 data:
   root_dir: "data"  # Root directory of the dataset
   raw_dir: "raw"  # Directory containing the raw data
-  split_path: "splits/train_test_split.json"
+  split_file: "splits/train_test_split.json"
   num_classes: 5  # Background, Pancreas, Tumor, Arteries, Veins
   input_size: [512, 512]  # Images size
   num_workers: 2  # Number of workers to use in the DataLoader

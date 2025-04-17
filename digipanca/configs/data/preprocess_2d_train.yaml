@@ -1,12 +1,12 @@
 data:
   root_dir: "data"
-  raw_dir: "raw"
+  raw_dir: "raw/train"
   is_2d: true
   processed_dir: "processed/2d"
   target_orientation: ['R', 'P', 'S']
-  split_path: "splits/train_val_split.json"
   roi:
     w_min: 0
     w_max: 512
     h_min: 0
     h_max: 512
+  all_in_train: true
