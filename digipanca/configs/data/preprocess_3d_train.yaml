@@ -6,9 +6,9 @@ data:
   subvolume_size: 64
   subvolume_stride: 32
   target_orientation: ['R', 'P', 'S']
-  split_path: "splits/train_val_split.json"
   roi:
     w_min: 156
     w_max: 412
     h_min: 124
     h_max: 380
+  all_in_train: true

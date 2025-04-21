@@ -173,14 +173,19 @@ def main():
             split_type='val',
             transform=transform
         )
+
+        # Drop last batch if it has only one sample. Fix BatchNorm error
+        drop_last = len(train_dataset) % config['data']['batch_size'] == 1
         
+        # Create data loaders
         train_loader = DataLoader(
             train_dataset,
             batch_size=config['data']['batch_size'],
             shuffle=True,
             num_workers=config['data']['num_workers'],
             pin_memory=True,
-            persistent_workers=True
+            persistent_workers=True,
+            drop_last=drop_last
         )
         
         val_loader = DataLoader(

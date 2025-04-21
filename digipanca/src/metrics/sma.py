@@ -147,10 +147,10 @@ class SegmentationMetricsAccumulator:
 
     def reset(self):
         """Reset the metrics accumulator."""
-        self.dice_scores = None
-        self.iou_scores = None
-        self.precision_scores = None
-        self.recall_scores = None
+        self.dice_scores = []
+        self.iou_scores = []
+        self.precision_scores = []
+        self.recall_scores = []
         
     @staticmethod
     def compute_tp_fp_fn_tn(y_pred, y_true):
@@ -321,16 +321,10 @@ class SegmentationMetricsAccumulator:
         recall = self._handle_zero_division(recall, mask)
 
         # Store the results
-        if self.dice_scores is None:
-            self.dice_scores = dice
-            self.iou_scores = iou
-            self.precision_scores = precision
-            self.recall_scores = recall
-        else:
-            self.dice_scores = torch.cat((self.dice_scores, dice), dim=0)
-            self.iou_scores = torch.cat((self.iou_scores, iou), dim=0)
-            self.precision_scores = torch.cat((self.precision_scores, precision), dim=0)
-            self.recall_scores = torch.cat((self.recall_scores, recall), dim=0)
+        self.dice_scores.append(dice)
+        self.iou_scores.append(iou)
+        self.precision_scores.append(precision)
+        self.recall_scores.append(recall)
 
         return SegmentationMetricsAccumulator._get_metrics(
             dice,
@@ -349,10 +343,15 @@ class SegmentationMetricsAccumulator:
         dict
             A dictionary containing the aggregated metrics.
         """
+        dice_tensor = torch.cat(self.dice_scores, dim=0)
+        iou_tensor = torch.cat(self.iou_scores, dim=0)
+        precision_tensor = torch.cat(self.precision_scores, dim=0)
+        recall_tensor = torch.cat(self.recall_scores, dim=0)
+
         return SegmentationMetricsAccumulator._get_metrics(
-            self.dice_scores,
-            self.iou_scores,
-            self.precision_scores,
-            self.recall_scores,
+            dice_tensor,
+            iou_tensor,
+            precision_tensor,
+            recall_tensor,
             include_background=self.include_background
         )
