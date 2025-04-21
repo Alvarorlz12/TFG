@@ -3,7 +3,7 @@ description: "3D experiment using a simple UNet3D model"
 
 data:
   root_dir: "data"  # Root directory of the dataset
-  raw_dir: "raw"  # Directory containing the raw data
+  raw_dir: "raw/train"  # Directory containing the raw data
   processed_dir: "processed/3d"  # Directory for processed data
   is_3d: True  # Indicates if the data is 3D
   split_file: "splits/train_val_split.json"
