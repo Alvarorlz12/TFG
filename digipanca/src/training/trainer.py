@@ -315,7 +315,6 @@ class Trainer:
                 # Early stopping
                 if self.early_stopping(val_loss):
                     tqdm.write(f"Early stopping at epoch {epoch+1}")
-                    _SUMMARY["completed_epochs"] = epoch + 1
                     break
 
                 # Update progress bar
@@ -326,6 +325,10 @@ class Trainer:
                     train_dice=f"{train_metrics.get('dice', 0):.4f}",
                     valid_dice=f"{val_metrics.get('dice', 0):.4f}"
                 )
+
+            # Update the completed epochs in the summary
+            _SUMMARY["completed_epochs"] = epoch + 1
+
         except Exception as e:
             tqdm.write(f"An error occurred during training: {str(e)}")
             if self.notifier is not None:

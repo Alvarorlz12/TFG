@@ -73,6 +73,7 @@ def build_average_summary(all_data):
         "training_time": float(np.sum([f["training_time"] for f in all_data])),
         "training_time_mean": float(np.mean([f["training_time"] for f in all_data])),
         "folds": num_folds,
+        "completed_epochs": int(np.mean([f["completed_epochs"] for f in all_data])),
         "end_time": all_data[-1]["end_time"]
     }
 
