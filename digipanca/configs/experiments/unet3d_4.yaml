@@ -1,5 +1,5 @@
 name: "unet_3d"
-description: "3D experiment using a simple UNet3D model with 64 base channels"
+description: "3D experiment using a simple UNet3D model"
 
 data:
   root_dir: "data"  # Root directory of the dataset
@@ -23,7 +23,7 @@ model:
   type: unet3d
   in_channels: 1
   out_channels: 5
-  base_channels: 64
+  base_channels: 32
 
 training:
   num_epochs: 200
