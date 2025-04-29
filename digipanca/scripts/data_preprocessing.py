@@ -117,7 +117,7 @@ def preprocess_data(config_path='configs/data/preprocess.yaml'):
             )
             # Update metadata with patient information
             metadata.update(patient_metadata)
-            print(f"✅ ({i}/{len(sample_dirs)}) {os.path.basename(patient_id)}: {num_slices} slices saved.")
+            print(f"✅ ({i+1}/{len(sample_dirs)}) {os.path.basename(patient_id)}: {num_slices} slices saved.")
         else:
             # Process 3D data
             num_subvolumes, patient_metadata = process_patient_3d(
@@ -134,7 +134,7 @@ def preprocess_data(config_path='configs/data/preprocess.yaml'):
             )
             # Update metadata with patient information
             metadata.update(patient_metadata)
-            print(f"✅ ({i}/{len(sample_dirs)}) {os.path.basename(patient_id)}: {num_subvolumes} sub-volumes saved.")
+            print(f"✅ ({i+1}/{len(sample_dirs)}) {os.path.basename(patient_id)}: {num_subvolumes} sub-volumes saved.")
 
     # Save metadata for the split
     metadata_path = os.path.join(output_dir, "metadata.json")

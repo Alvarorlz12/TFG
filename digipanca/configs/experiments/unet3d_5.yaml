@@ -1,0 +1,38 @@
+name: "unet_3d"
+description: "3D experiment using a simple UNet3D model"
+
+data:
+  root_dir: "data"  # Root directory of the dataset
+  raw_dir: "raw/train"  # Directory containing the raw data
+  processed_dir: "processed/3d_res"  # Directory for processed data
+  is_3d: True  # Indicates if the data is 3D
+  split_file: "splits/kfold_cv.json"
+  num_classes: 5  # Background, Pancreas, Tumor, Arteries, Veins
+  input_size: [512, 512]  # Images size
+  num_workers: 2  # Number of workers to use in the DataLoader
+  batch_size: 2  # Number of samples in each batch
+
+transforms:
+  - ApplyWindow:
+      window_level: 50
+      window_width: 400
+  - Normalize: {}
+  - ToTensor: {}
+
+model:
+  type: unet3d
+  in_channels: 1
+  out_channels: 5
+  base_channels: 32
+
+training:
+  num_epochs: 200
+  learning_rate: 0.00005
+  weight_decay: 0.000005
+  loss_function: "DiceFocalLoss"
+  loss_params:
+    include_background: False
+    gamma: 2.0
+    reduction: "mean"
+  device: "cuda"
+  patience: 15
