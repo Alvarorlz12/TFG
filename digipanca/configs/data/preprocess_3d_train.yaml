@@ -11,4 +11,4 @@ data:
     w_max: 412
     h_min: 124
     h_max: 380
-  all_in_train: true
+  all_in_folder: true

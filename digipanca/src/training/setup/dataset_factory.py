@@ -6,7 +6,7 @@ from src.data.dataset3d import PancreasDataset3D
 
 def get_dataset(
     config,
-    split_data,
+    split_data=None,
     split_type='train',
     data_folder='train',
     transform=None,
@@ -18,8 +18,9 @@ def get_dataset(
     ----------
     config : dict
         Configuration dictionary.
-    split_data : dict
-        Dictionary containing the split data.
+    split_data : dict, optional
+        Dictionary containing the split data, by default None. If None, the
+        dataset will be loaded without filtering by patient IDs.
     split_type : str, optional
         Split type (train/val/test), by default 'train'.
     data_folder : str, optional
@@ -35,14 +36,18 @@ def get_dataset(
         Pancreas dataset object.
     """
     # Check that there is not augmentation for validation/test sets
-    if split_type != 'train' and augment is not None:
+    if (split_type != 'train' or data_folder != 'train') \
+        and augment is not None:
         raise ValueError("Augmentations are only allowed for the training set.")
     # Ensure split type is valid
     if split_type not in ['train', 'val', 'test']:
         raise ValueError(f"Invalid split type: {split_type}")
+    # Ensure data folder is valid
+    if data_folder not in ['train', 'test']:
+        raise ValueError(f"Invalid data folder: {data_folder}")
     
     # Get the patient IDs for the specified split type
-    patient_ids = split_data.get(split_type, [])
+    patient_ids = split_data.get(split_type, None) if split_data else None
 
     # data_folder is the folder name in the processed directory
     # e.g. 'train' or 'test'

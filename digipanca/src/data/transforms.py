@@ -1,6 +1,7 @@
 import cv2
 import torch
 import numpy as np
+import nibabel as nib
 
 from nibabel.orientations import axcodes2ornt, io_orientation, ornt_transform, apply_orientation
 
@@ -83,10 +84,17 @@ class Orientation:
     def __init__(self, target_orientation=('R', 'A', 'S')):
         self.target_orientation = axcodes2ornt(target_orientation)
 
-    def __call__(self, image_nifti):
-        current_orientation = io_orientation(image_nifti.affine)
+    def __call__(self, image, affine=None):
+        if isinstance(image, nib.Nifti1Image):
+            image = image.get_fdata().astype(np.float64)
+            affine = image.affine if affine is None else affine
+        else:
+            if affine is None:
+                raise ValueError("Affine matrix is required for non-NIfTI images.")
+            
+        current_orientation = io_orientation(affine)
         transform = ornt_transform(current_orientation, self.target_orientation)
-        image = apply_orientation(image_nifti.get_fdata(), transform)
+        image = apply_orientation(image, transform)
         return image, transform
 
 class CropROI:

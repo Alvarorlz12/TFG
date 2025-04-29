@@ -1,0 +1,12 @@
+data:
+  root_dir: "data"
+  raw_dir: "raw/train"
+  is_2d: true
+  processed_dir: "processed/2d_res"
+  target_spacing: [0.8, 0.8, 1.0]
+  target_orientation: ['R', 'P', 'S']
+  roi:
+    w_min: 158
+    w_max: 414
+    h_min: 114
+    h_max: 370

@@ -9,4 +9,4 @@ data:
     w_max: 512
     h_min: 0
     h_max: 512
-  all_in_train: true
+  all_in_folder: true

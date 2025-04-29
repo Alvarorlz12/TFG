@@ -60,7 +60,7 @@ def build_average_summary(all_data):
         "learning_rate": base["learning_rate"],
         "optimizer": base["optimizer"],
         "loss_function": base["loss_function"],
-        "experiment_dir": str(Path(base["experiment_dir"]).parent),  # directory without fold
+        "experiment_dir": base["experiment_dir"],
         "train_loss": float(np.mean([f["train_loss"] for f in all_data])),
         "val_loss": float(np.mean([f["val_loss"] for f in all_data])),
         "train_metrics": average_dicts([f["train_metrics"] for f in all_data]),

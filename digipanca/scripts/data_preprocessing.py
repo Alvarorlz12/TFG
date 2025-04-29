@@ -73,6 +73,9 @@ def preprocess_data(config_path='configs/data/preprocess.yaml'):
     # Common parameters
     RAW_DATA_DIR = config["data"]["raw_dir"]
     PROCESSED_DATA_DIR = config["data"]["processed_dir"]
+    TARGET_SPACING = config["data"].get("target_spacing", None)
+    if TARGET_SPACING is not None:
+        TARGET_SPACING = tuple(TARGET_SPACING)
     TARGET_ORIENTATION = tuple(config["data"]["target_orientation"])
     H_MAX = config["data"]["roi"].get("h_max", 512)
     W_MAX = config["data"]["roi"].get("w_max", 512)
@@ -105,6 +108,7 @@ def preprocess_data(config_path='configs/data/preprocess.yaml'):
             num_slices, patient_metadata = process_patient_2d(
                 patient_dir=patient_dir,
                 output_dir=output_dir,
+                target_spacing=TARGET_SPACING,
                 target_orientation=TARGET_ORIENTATION,
                 h_min=H_MIN,
                 h_max=H_MAX,
@@ -119,6 +123,7 @@ def preprocess_data(config_path='configs/data/preprocess.yaml'):
             num_subvolumes, patient_metadata = process_patient_3d(
                 patient_dir=patient_dir,
                 output_dir=output_dir,
+                target_spacing=TARGET_SPACING,
                 subvolume_size=SUBVOLUME_SIZE,
                 subvolume_stride=SUBVOLUME_STRIDE,
                 target_orientation=TARGET_ORIENTATION,

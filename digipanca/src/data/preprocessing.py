@@ -4,6 +4,7 @@ import cv2
 import numpy as np
 import nibabel as nib
 
+from scipy.ndimage import zoom
 from nibabel.processing import resample_from_to
 from nibabel.orientations import apply_orientation
 
@@ -64,9 +65,237 @@ def pad_volume(volume, target_size):
 
     return np.pad(volume, ((0, 0), (0, 0), (pad_before, pad_after)), mode="constant")
 
+def resample_volume_spacing(image, target_spacing, current_spacing=None):
+    """
+    Resample the image to the target spacing.
+
+    Parameters
+    ----------
+    image_nii : nibabel.Nifti1Image or np.ndarray
+        NIfTI image or image data to resample.
+    target_spacing : tuple of float
+        Target spacing for resampling.
+    current_spacing : tuple of float, optional
+        Current spacing of the image. If not specified, it is obtained from the
+        image header. If None, the current spacing is used.
+
+    Returns
+    -------
+    np.ndarray
+        Resampled image data.
+    """
+    if isinstance(image, nib.Nifti1Image):
+        current_spacing = image.header.get_zooms()[:3]
+        image = image.get_fdata().astype(np.float64)
+    elif isinstance(image, np.ndarray):
+        if current_spacing is None:
+            raise ValueError("Current spacing must be provided when image is a NumPy array.")
+        
+    zoom_factors = np.array(current_spacing) / np.array(target_spacing)
+    
+    return zoom(image, zoom_factors, order=1)  # Linear interpolation
+    
+def resample_mask_spacing(mask, target_spacing, current_spacing=None):
+    """
+    Resample the mask to the target spacing.
+
+    Parameters
+    ----------
+    mask_nii : nibabel.Nifti1Image or np.ndarray
+        NIfTI image or image data to resample.
+    target_spacing : tuple of float
+        Target spacing for resampling.
+    current_spacing : tuple of float, optional
+        Current spacing of the image. If not specified, it is obtained from the
+        image header. If None, the current spacing is used.
+
+    Returns
+    -------
+    np.ndarray
+        Resampled mask data.
+    """
+    if isinstance(mask, nib.Nifti1Image):
+        current_spacing = mask.header.get_zooms()[:3]
+        mask = mask.get_fdata().astype(np.uint8)
+    elif isinstance(mask, np.ndarray):
+        if current_spacing is None:
+            raise ValueError("Current spacing must be provided when mask is a NumPy array.")
+        
+    zoom_factors = np.array(current_spacing) / np.array(target_spacing)
+    
+    return zoom(mask, zoom_factors, order=0)  # Nearest-neighbor interpolation
+
+def update_affine(affine, target_spacing):
+    """
+    Update the affine matrix to reflect the new spacing.
+
+    Parameters
+    ----------
+    affine : np.ndarray
+        Affine matrix to update.
+    target_spacing : tuple of float
+        Target spacing for resampling.
+
+    Returns
+    -------
+    np.ndarray
+        Updated affine matrix.
+    """
+    new_affine = affine.copy()
+    for i in range(3):
+        new_affine[i, i] = -target_spacing[i] if affine[i, i] < 0 else target_spacing[i]
+    
+    return new_affine
+
+def crop_or_pad_to_size(image, target_size):
+    """
+    Crop or pad the image to the target size.
+
+    Parameters
+    ----------
+    image : np.ndarray
+        Image to crop or pad.
+    target_size : tuple of int
+        Target size for cropping or padding.
+
+    Returns
+    -------
+    np.ndarray
+        Cropped or padded image.
+    """
+    Hi, Wi, _ = image.shape
+    Ht, Wt = target_size
+
+    if Hi == Ht and Wi == Wt:
+        return image  # No cropping or padding needed
+
+    # Crop the image if it's larger than the target size
+    if Hi > Ht or Wi > Wt:
+        h_start = (Hi - Ht) // 2
+        w_start = (Wi - Wt) // 2
+        return image[h_start:h_start + Ht, w_start:w_start + Wt, :]
+    # Pad the image if it's smaller than the target size
+    else:
+        pad_h_after = (Ht - Hi) // 2
+        pad_h_before = (Ht - Hi) - pad_h_after
+        pad_w_after = (Wt - Wi) // 2
+        pad_w_before = (Wt - Wi) - pad_w_after
+        return np.pad(
+            image,
+            ((pad_h_before, pad_h_after), (pad_w_before, pad_w_after), (0, 0)),
+            mode="constant",
+            constant_values=0
+        )
+    
+def process_volume(
+    patient_dir,
+    target_spacing=None,
+    target_orientation=("R", "P", "S"),
+    rotation_axes=(0, 1),
+    h_min=0, h_max=512,
+    w_min=0, w_max=512
+):
+    """
+    Process a patient directory containing NIfTI files. It loads the NIfTI files
+    and returns the image and masks as NumPy arrays. The image is reoriented,
+    rotated, and cropped to the specified size. The masks are also reoriented,
+    rotated, and cropped to the specified size. The masks are combined into a 
+    single mask.
+
+    Parameters
+    ----------
+    patient_dir : str
+        Path to the patient directory.
+    target_spacing : tuple of float, optional
+        Target spacing for resampling, by default None. If None, no resampling
+        is done.
+    target_orientation : Tuple[str], optional
+        Target orientation of the image, by default ("R", "P", "S").
+    rotation_axes : Tuple[int], optional
+        Axis to rotate the image, by default (0, 1).
+    h_min : int, optional
+        Minimum height of the image, by default 0.
+    h_max : int, optional
+        Maximum height of the image, by default 512.
+    w_min : int, optional
+        Minimum width of the image, by default 0.
+    w_max : int, optional
+        Maximum width of the image, by default 512.
+
+    Returns
+    -------
+    np.ndarray
+        Image data.
+    np.ndarray
+        Combined mask data.
+    str
+        Patient ID.
+    """
+    patient_id = os.path.basename(patient_dir)
+    reorient = transforms.Orientation(target_orientation)
+
+    # Image and mask paths
+    image_path = os.path.join(patient_dir, "SEQ", f"CTport-{patient_id}.nii")
+    mask_paths = {
+        "pancreas": os.path.join(patient_dir, "SEG", f"Pancreas-{patient_id}.nii"),
+        "tumor": os.path.join(patient_dir, "SEG", f"Tumor-{patient_id}.nii"),
+        "arteries": os.path.join(patient_dir, "SEG", f"Arterias-{patient_id}.nii"),
+        "veins": os.path.join(patient_dir, "SEG", f"Venas-{patient_id}.nii"),
+    }
+
+    # Load the image and masks
+    image_nii = nib.load(image_path)
+    affine = image_nii.affine
+
+    if target_spacing is not None:
+        image = resample_volume_spacing(image_nii, target_spacing)
+        image = crop_or_pad_to_size(image, (512, 512))  # Crop or pad to size
+        affine = update_affine(affine, target_spacing)  # Update the affine matrix
+        image, transform = reorient(image, affine)  # Reorient the image
+    else:
+        image, transform = reorient(image_nii) # Reorient the image
+
+    image = np.rot90(image, k=-1, axes=rotation_axes)   # Rotate the image
+    image = image[h_min:h_max, w_min:w_max, :]  # Apply cropping
+
+    masks = np.zeros_like(image)
+
+    # Combine the segmentation masks
+    for i, (_, mask_path) in enumerate(mask_paths.items(), start=1):
+        mask_nii = nib.load(mask_path)
+
+        # Ensure the number of slices match the image
+        if mask_nii.shape[2] != image_nii.shape[2]:
+            mask_nii = resample_from_to(mask_nii, image_nii, order=0)
+
+        # Resample the mask to the target spacing if specified
+        if target_spacing is not None:
+            mask_data = resample_mask_spacing(mask_nii, target_spacing)
+            mask_data = crop_or_pad_to_size(mask_data, (512, 512))
+        else:
+            mask_data = mask_nii.get_fdata()
+
+        # Binarize the mask
+        mask_data = (mask_data > 0).astype(np.uint8)
+
+        # Apply orientation transformation
+        mask_data = apply_orientation(mask_data, transform)
+
+        # Rotate the mask
+        mask_data = np.rot90(mask_data, k=-1, axes=rotation_axes)
+
+        # Apply cropping
+        mask_data = mask_data[h_min:h_max, w_min:w_max, :]
+
+        # Class label assignment: 1 for pancreas, 2 for tumor...
+        masks[mask_data > 0] = i
+
+    return image, masks, patient_id
+
 def process_patient_3d(
     patient_dir,
     output_dir,
+    target_spacing=None,
     subvolume_size=64,
     subvolume_stride=32,
     target_orientation=("R", "P", "S"),
@@ -85,6 +314,9 @@ def process_patient_3d(
         Path to the patient directory.
     output_dir : str
         Directory to save the processed sub-volumes.
+    target_spacing : tuple of float, optional
+        Target spacing for resampling, by default None. If None, no resampling 
+        is done.
     subvolume_size : int, optional
         Size of the sub-volumes, by default 64.
     subvolume_stride : int, optional
@@ -109,50 +341,14 @@ def process_patient_3d(
     dict
         Metadata for the sub-volumes.
     """
-    patient_id = os.path.basename(patient_dir)
-    reorient = transforms.Orientation(target_orientation)
-
-    # Image and mask paths
-    image_path = os.path.join(patient_dir, "SEQ", f"CTport-{patient_id}.nii")
-    mask_paths = {
-        "pancreas": os.path.join(patient_dir, "SEG", f"Pancreas-{patient_id}.nii"),
-        "tumor": os.path.join(patient_dir, "SEG", f"Tumor-{patient_id}.nii"),
-        "arteries": os.path.join(patient_dir, "SEG", f"Arterias-{patient_id}.nii"),
-        "veins": os.path.join(patient_dir, "SEG", f"Venas-{patient_id}.nii"),
-    }
-
-    # Load the image and masks
-    image_nii = nib.load(image_path)
-    image, transform = reorient(image_nii) # Reorient the image
-
-    image = np.rot90(image, k=-1, axes=rotation_axes)   # Rotate the image
-    image = image[h_min:h_max, w_min:w_max, :]  # Apply cropping
-
-    masks = np.zeros_like(image)
-
-    # Combine the segmentation masks
-    for i, (_, mask_path) in enumerate(mask_paths.items(), start=1):
-        mask_nii = nib.load(mask_path)
-
-        # Ensure the number of slices match the image
-        if mask_nii.shape[2] != image.shape[2]:
-            mask_nii = resample_from_to(mask_nii, image_nii, order=0)
-        mask_data = mask_nii.get_fdata()
-
-        # Binarize the mask
-        mask_data = (mask_data > 0).astype(np.uint8)
-
-        # Apply orientation transformation
-        mask_data = apply_orientation(mask_data, transform)
-
-        # Rotate the mask
-        mask_data = np.rot90(mask_data, k=-1, axes=rotation_axes)
-
-        # Apply cropping
-        mask_data = mask_data[h_min:h_max, w_min:w_max, :]
-
-        # Class label assignment: 1 for pancreas, 2 for tumor...
-        masks[mask_data > 0] = i
+    image, masks, patient_id = process_volume(
+        patient_dir,
+        target_spacing=target_spacing,
+        target_orientation=target_orientation,
+        rotation_axes=rotation_axes,
+        h_min=h_min, h_max=h_max,
+        w_min=w_min, w_max=w_max
+    )
 
     num_slices = image.shape[2]
 
@@ -232,6 +428,7 @@ def process_patient_3d(
 def process_patient_2d(
     patient_dir,
     output_dir,
+    target_spacing=None,
     target_orientation=("R", "P", "S"),
     rotation_axes=(0, 1),
     h_min=0, h_max=512,
@@ -250,6 +447,9 @@ def process_patient_2d(
         Path to the patient directory.
     output_dir : str
         Directory to save the processed sub-volumes.
+    target_spacing : tuple of float, optional
+        Target spacing for resampling, by default None. If None, no resampling
+        is done.
     target_orientation : Tuple[str], optional
         Target orientation of the image, by default ("R", "P", "S").
     rotation_axes : Tuple[int], optional
@@ -270,50 +470,14 @@ def process_patient_2d(
     dict
         Metadata for the slices.
     """
-    patient_id = os.path.basename(patient_dir)
-    reorient = transforms.Orientation(target_orientation)
-
-    # Image and mask paths
-    image_path = os.path.join(patient_dir, "SEQ", f"CTport-{patient_id}.nii")
-    mask_paths = {
-        "pancreas": os.path.join(patient_dir, "SEG", f"Pancreas-{patient_id}.nii"),
-        "tumor": os.path.join(patient_dir, "SEG", f"Tumor-{patient_id}.nii"),
-        "arteries": os.path.join(patient_dir, "SEG", f"Arterias-{patient_id}.nii"),
-        "veins": os.path.join(patient_dir, "SEG", f"Venas-{patient_id}.nii"),
-    }
-
-    # Load the image and masks
-    image_nii = nib.load(image_path)
-    image, transform = reorient(image_nii) # Reorient the image
-
-    image = np.rot90(image, k=-1, axes=rotation_axes)   # Rotate the image
-    image = image[h_min:h_max, w_min:w_max, :]  # Apply cropping
-
-    masks = np.zeros_like(image)
-
-    # Combine the segmentation masks
-    for i, (_, mask_path) in enumerate(mask_paths.items(), start=1):
-        mask_nii = nib.load(mask_path)
-
-        # Ensure the number of slices match the image
-        if mask_nii.shape[2] != image.shape[2]:
-            mask_nii = resample_from_to(mask_nii, image_nii, order=0)
-        mask_data = mask_nii.get_fdata()
-
-        # Binarize the mask
-        mask_data = (mask_data > 0).astype(np.uint8)
-
-        # Apply orientation transformation
-        mask_data = apply_orientation(mask_data, transform)
-
-        # Rotate the mask
-        mask_data = np.rot90(mask_data, k=-1, axes=rotation_axes)
-
-        # Apply cropping
-        mask_data = mask_data[h_min:h_max, w_min:w_max, :]
-
-        # Class label assignment: 1 for pancreas, 2 for tumor...
-        masks[mask_data > 0] = i
+    image, masks, patient_id = process_volume(
+        patient_dir,
+        target_spacing=target_spacing,
+        target_orientation=target_orientation,
+        rotation_axes=rotation_axes,
+        h_min=h_min, h_max=h_max,
+        w_min=w_min, w_max=w_max
+    )
 
     num_slices = image.shape[2]
 
