@@ -1,5 +1,5 @@
 name: "unet_3d"
-description: "3D experiment using a simple UNet3D model"
+description: "3D experiment using a simple UNet3D model and spacing resampling."
 
 data:
   root_dir: "data"  # Root directory of the dataset
