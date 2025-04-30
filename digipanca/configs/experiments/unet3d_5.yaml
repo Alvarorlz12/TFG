@@ -1,5 +1,5 @@
 name: "unet_3d"
-description: "3D experiment using a simple UNet3D model and spacing resampling."
+description: "UNet3D with transforms, data augmentation and spacing resampling."
 
 data:
   root_dir: "data"  # Root directory of the dataset
@@ -18,6 +18,22 @@ transforms:
       window_width: 400
   - Normalize: {}
   - ToTensor: {}
+
+augmentations:
+  - RandomAffine:
+      scales: [0.95, 1.05]
+      degrees: 10
+      translation: 5
+      p: 0.3
+  - RandomFlip:
+      axes: [0]
+      p: 0.3
+  - RandomNoise:
+      mean: 0
+      std: [0, 0.05]
+      p: 0.3
+  - RandomBlur:
+      p: 0.3
 
 model:
   type: unet3d
