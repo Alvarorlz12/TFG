@@ -14,6 +14,7 @@ class PancreasDataset3D(Dataset):
     def __init__(self,
         data_dir,
         transform=None,
+        augment=None,
         load_into_memory=False,
         patient_ids=None
     ):
@@ -26,6 +27,8 @@ class PancreasDataset3D(Dataset):
             Path to the directory containing the processed sub-volumes.
         transform : callable
             A function/transform to apply to the image and mask.
+        augment : callable
+            A function/transform to apply to the image and mask for augmentation.
         load_into_memory : bool, optional
             Whether to load the entire dataset into memory, by default False.
         patient_ids : list, optional
@@ -34,6 +37,7 @@ class PancreasDataset3D(Dataset):
         self.image_dir = os.path.join(data_dir, "images")
         self.mask_dir = os.path.join(data_dir, "masks")
         self.transform = transform
+        self.augment = augment
         self.load_into_memory = load_into_memory
 
         metadata_path = os.path.join(data_dir, "metadata.json")
@@ -83,6 +87,9 @@ class PancreasDataset3D(Dataset):
         if self.transform:
             image, mask = self.transform(image, mask)
 
+        if self.augment:
+            image, mask = self.augment(image, mask)
+
         # Add channel dimension to the image
         if image.dim() == 3:
             image = image.unsqueeze(0)
@@ -130,4 +137,125 @@ class PancreasDataset3D(Dataset):
         slices = self.metadata[filename]["slices"]
         padded = self.metadata[filename].get("padded", 0) // 2
         return slices[0] + padded + slice_idx
-        
+    
+    def get_patient_volume(self, patient_id):
+        """
+        Get the full volume (images and masks) for a specific patient.
+
+        Parameters
+        ----------
+        patient_id : str
+            Patient ID to retrieve the volume for.
+
+        Returns
+        -------
+        tuple
+            A tuple containing:
+            - volume (torch.Tensor): Tensor of shape (B, C, D, H, W).
+            - masks (torch.Tensor): Corresponding masks tensor of shape (B, D, H, W).
+        """
+
+        # Filter sub-volumes for the given patient ID
+        patient_subvolumes = [
+            filename for filename, meta in self.metadata.items() if meta["patient_id"] == patient_id
+        ]
+
+        if not patient_subvolumes:
+            raise ValueError(f"No sub-volumes found for patient ID: {patient_id}")
+
+        # Sort sub-volumes by their slice indices
+        patient_subvolumes.sort(key=lambda x: self.metadata[x]["slices"][0])
+
+        # Initialize lists to store the full volume and masks
+        full_volume = []
+        full_masks = []
+
+        for idx, filename in enumerate(patient_subvolumes):
+            img_path = os.path.join(self.image_dir, filename)
+            msk_path = os.path.join(self.mask_dir, self.metadata[filename]["mask_filename"])
+
+            image = torch.tensor(np.load(img_path))   # (D, H, W)
+            mask = torch.tensor(np.load(msk_path), dtype=torch.long)    # (D, H, W)
+
+            padded = self.metadata[filename].get("padded", 0)
+            if padded > 0:
+                first_pad = padded // 2
+                last_pad = padded - first_pad
+                image = image[first_pad:-last_pad]
+                mask = mask[first_pad:-last_pad]
+
+            if idx == 0:
+                # First sub-volume, no overlap
+                full_volume.append(image)
+                full_masks.append(mask)
+            else:
+                prev_end = self.metadata[patient_subvolumes[idx - 1]]["slices"][1]
+                curr_start = self.metadata[filename]["slices"][0]
+                # Check for overlap
+                overlap = prev_end - curr_start + 1
+                non_overlap = image[overlap:]  # Non-overlapping part
+                non_overlap_mask = mask[overlap:]
+
+                full_volume.append(non_overlap)
+                full_masks.append(non_overlap_mask)
+
+        # Concatenate all sub-volumes and masks along the depth dimension
+        full_volume = torch.cat(full_volume, dim=0) # (D, H, W)
+        full_masks = torch.cat(full_masks, dim=0)   # (D, H, W)
+
+        # Apply transform if provided
+        if self.transform:
+            full_volume, full_masks = self.transform(full_volume, full_masks)
+
+        # Add batch dimension to the volume and masks if needed
+        if full_volume.dim() == 3:  # (D, H, W) to (B, C, D, H, W)
+            full_volume = full_volume.unsqueeze(0).unsqueeze(0)
+        elif full_volume.dim() == 4:  # (C, D, H, W) to (B, C, D, H, W)
+            full_volume = full_volume.unsqueeze(0)
+        if full_masks.dim() == 3:   # (D, H, W) to (B, D, H, W)
+            full_masks = full_masks.unsqueeze(0)
+
+        return full_volume, full_masks
+    
+    def get_patient_subset(self, patient_id):
+        """
+        """
+        return PancreasDataset3D(
+            data_dir=self.data_dir,
+            transform=self.transform,
+            load_into_memory=False,
+            patient_ids=[patient_id]
+        )
+    
+    def get_patient_subvolumes_slices(self, patient_id):
+        """
+        Get the slices of the sub-volumes for a specific patient.
+
+        Parameters
+        ----------
+        patient_id : str
+            Patient ID to retrieve the slices for.
+
+        Returns
+        -------
+        list of tuples
+            A list of tuples containing the start and end slice indices of each sub-volume.
+        """
+        # Filter sub-volumes for the given patient ID
+        patient_subvolumes = [
+            filename for filename, meta in self.metadata.items() if meta["patient_id"] == patient_id
+        ]
+
+        if not patient_subvolumes:
+            raise ValueError(f"No sub-volumes found for patient ID: {patient_id}")
+
+        # Sort sub-volumes by their slice indices
+        patient_subvolumes.sort(key=lambda x: self.metadata[x]["slices"][0])
+
+        # Get the slices of each sub-volume
+        slices = [
+            (self.metadata[filename]["slices"][0], self.metadata[filename]["slices"][1])
+            for filename in patient_subvolumes
+        ]
+
+        return slices

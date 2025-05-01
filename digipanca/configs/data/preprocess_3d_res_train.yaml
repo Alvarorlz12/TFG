@@ -8,7 +8,7 @@ data:
   subvolume_stride: 1
   target_orientation: ['R', 'P', 'S']
   roi:
-    w_min: 156
-    w_max: 412
-    h_min: 124
-    h_max: 380
+    w_min: 158
+    w_max: 414
+    h_min: 114
+    h_max: 370
