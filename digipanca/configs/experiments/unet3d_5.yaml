@@ -6,7 +6,7 @@ data:
   raw_dir: "raw/train"  # Directory containing the raw data
   processed_dir: "processed/3d_res"  # Directory for processed data
   is_3d: True  # Indicates if the data is 3D
-  split_file: "splits/test_kfold_cv_3d_res.json"
+  split_file: "splits/kfold_cv.json"
   num_classes: 5  # Background, Pancreas, Tumor, Arteries, Veins
   input_size: [512, 512]  # Images size
   num_workers: 2  # Number of workers to use in the DataLoader
