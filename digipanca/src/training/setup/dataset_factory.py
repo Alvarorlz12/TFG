@@ -57,6 +57,7 @@ def get_dataset(
         return PancreasDataset3D(
             data_dir=data_dir,
             transform=transform,
+            augment=augment,
             load_into_memory=config['data'].get('load_into_memory', False),
             patient_ids=patient_ids
         )
