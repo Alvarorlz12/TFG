@@ -30,6 +30,7 @@ dependencies = [
     "opencv-python>=4.10.0",
     "monai>=0.8.0",
     "albumentations>=1.0.0",
+    "torchio>=0.2.0",
 ]
 
 [project.optional-dependencies]

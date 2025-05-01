@@ -94,7 +94,7 @@ class PancreasDataset3D(Dataset):
         if image.dim() == 3:
             image = image.unsqueeze(0)
 
-        return image, mask, patient_id
+        return image.float(), mask.long(), patient_id
     
     def get_volume_slice_idx(self, idx, slice_idx):
         """
