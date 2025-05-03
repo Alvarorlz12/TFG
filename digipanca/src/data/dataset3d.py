@@ -16,7 +16,8 @@ class PancreasDataset3D(Dataset):
         transform=None,
         augment=None,
         load_into_memory=False,
-        patient_ids=None
+        patient_ids=None,
+        verbose=True
     ):
         """
         Initialize the Pancreas 3D dataset.
@@ -33,12 +34,15 @@ class PancreasDataset3D(Dataset):
             Whether to load the entire dataset into memory, by default False.
         patient_ids : list, optional
             List of patient IDs to filter the dataset, by default None.
+        verbose : bool, optional
+            Whether to print loading messages, by default True.
         """
         self.image_dir = os.path.join(data_dir, "images")
         self.mask_dir = os.path.join(data_dir, "masks")
         self.transform = transform
         self.augment = augment
         self.load_into_memory = load_into_memory
+        self.verbose = verbose
 
         metadata_path = os.path.join(data_dir, "metadata.json")
         with open(metadata_path, "r") as f:
@@ -53,7 +57,8 @@ class PancreasDataset3D(Dataset):
         # Get the list of image filenames
         self.image_filenames = sorted(self.metadata.keys())
 
-        print(f"📊 Loading dataset... {len(self.image_filenames)} sub-volumes found.")
+        if self.verbose:
+            print(f"📊 Loading dataset... {len(self.image_filenames)} sub-volumes found.")
 
         # Load the data into memory if specified
         if self.load_into_memory:
@@ -66,7 +71,8 @@ class PancreasDataset3D(Dataset):
                 )
                 for filename in self.image_filenames
             }
-            print(f"✅ Dataset loaded. {len(self.image_filenames)} sub-volumes loaded.")
+            if self.verbose:
+                print(f"✅ Dataset loaded. {len(self.image_filenames)} sub-volumes loaded.")
 
     def __len__(self):
         return len(self.image_filenames)

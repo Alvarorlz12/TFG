@@ -32,7 +32,7 @@ def get_dataset(
 
     Returns
     -------
-    PancreasDataset or PancreasDataset3D
+    PancreasDataset2D or PancreasDataset3D
         Pancreas dataset object.
     """
     # Check that there is not augmentation for validation/test sets

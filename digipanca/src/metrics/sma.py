@@ -1,69 +1,6 @@
 import torch
 
-def convert_to_one_hot(y_pred, y_true):
-    """
-    Convert a prediction and ground truth to one-hot encoding. It works for 
-    both 2D data (H, W) and 3D data (D, H, W), which tensors are (B, H, W) 
-    and (B, D, H, W) respectively.
-
-    Parameters
-    ----------
-    y_pred : torch.Tensor
-        The predicted segmentation map.
-    y_true : torch.Tensor
-        The ground truth segmentation map.
-
-    Returns
-    -------
-    torch.Tensor
-        The one-hot encoded tensor for the predicted segmentation map.
-    torch.Tensor
-        The one-hot encoded tensor for the ground truth segmentation map.
-    """
-    def is_one_hot(tensor):
-        """
-        Check if the tensor is one-hot encoded.
-        """
-        return (tensor.sum(dim=1) == 1).all() and \
-                torch.all((tensor == 0) | (tensor == 1))
-    
-    # Check if the input is already one-hot encoded
-    if is_one_hot(y_pred) and is_one_hot(y_true):
-        return y_pred, y_true
-    
-    # Check if the input is 2D or 3D
-    if y_pred.dim() == 4 and y_true.dim() == 3: # 2D case
-        B, C, H, W = y_pred.shape
-        n_classes = C
-
-        # Convert y_pred to one-hot encoding
-        y_pred_classes = torch.argmax(y_pred, dim=1, keepdim=True)
-        y_pred_one_hot = torch.zeros(B, n_classes, H, W, device=y_pred.device)
-        y_pred_one_hot.scatter_(1, y_pred_classes, 1)
-
-        # Convert y_true to one-hot encoding
-        y_true_one_hot = torch.zeros(B, n_classes, H, W, device=y_true.device)
-        y_true_one_hot.scatter_(1, y_true.unsqueeze(1).long(), 1)
-
-        return y_pred_one_hot, y_true_one_hot
-    
-    elif y_pred.dim() == 5 and y_true.dim() == 4:   # 3D case
-        B, C, D, H, W = y_pred.shape
-        n_classes = C
-
-        # Convert y_pred to one-hot encoding
-        y_pred_classes = torch.argmax(y_pred, dim=1, keepdim=True)
-        y_pred_one_hot = torch.zeros(B, n_classes, D, H, W, device=y_pred.device)
-        y_pred_one_hot.scatter_(1, y_pred_classes, 1)
-
-        # Convert y_true to one-hot encoding
-        y_true_one_hot = torch.zeros(B, n_classes, D, H, W, device=y_true.device)
-        y_true_one_hot.scatter_(1, y_true.unsqueeze(1).long(), 1)
-
-        return y_pred_one_hot, y_true_one_hot
-
-    else:
-        raise ValueError("Input tensors must be either 2D or 3D.")
+from src.utils.data import convert_to_one_hot
 
 class SegmentationMetricsAccumulator:
     """
@@ -151,6 +88,10 @@ class SegmentationMetricsAccumulator:
         self.iou_scores = []
         self.precision_scores = []
         self.recall_scores = []
+        self.tp = []
+        self.fp = []
+        self.fn = []
+        self.tn = []
         
     @staticmethod
     def compute_tp_fp_fn_tn(y_pred, y_true):
@@ -302,7 +243,7 @@ class SegmentationMetricsAccumulator:
         mask = torch.sum(y_pred_oh + y_true_oh, dim=dims) == 0
 
         # Compute true positives, false positives, and false negatives
-        tp, fp, fn, _ = self.compute_tp_fp_fn_tn(y_pred_oh, y_true_oh)
+        tp, fp, fn, tn = self.compute_tp_fp_fn_tn(y_pred_oh, y_true_oh)
 
         # Compute dice
         dice = 2. * tp / (2. * tp + fp + fn + self.smooth_factor)
@@ -325,6 +266,10 @@ class SegmentationMetricsAccumulator:
         self.iou_scores.append(iou)
         self.precision_scores.append(precision)
         self.recall_scores.append(recall)
+        self.tp.append(tp)
+        self.fp.append(fp)
+        self.fn.append(fn)
+        self.tn.append(tn)
 
         return SegmentationMetricsAccumulator._get_metrics(
             dice,
@@ -355,3 +300,38 @@ class SegmentationMetricsAccumulator:
             recall_tensor,
             include_background=self.include_background
         )
+    
+    def aggregate_global_cm(self):
+        tp_tensor = torch.cat(self.tp, dim=0)
+        fp_tensor = torch.cat(self.fp, dim=0)
+        fn_tensor = torch.cat(self.fn, dim=0)
+        tn_tensor = torch.cat(self.tn, dim=0)
+
+        C = tp_tensor.shape[1]  # Number of classes
+
+        # Exclude background class if not needed
+        start_class = 0 if self.include_background else 1
+
+        # Calculate means excluding NaNs
+        tp = torch.nansum(tp_tensor[:, start_class:], dim=0)
+        fp = torch.nansum(fp_tensor[:, start_class:], dim=0)
+        fn = torch.nansum(fn_tensor[:, start_class:], dim=0)
+        tn = torch.nansum(tn_tensor[:, start_class:], dim=0)
+
+        classes = range(start_class, C)
+
+        cm = {
+            f"tp_class_{i}": tp[i - start_class].item() for i in classes
+        }
+        cm.update({f"fp_class_{i}": fp[i - start_class].item() for i in classes})
+        cm.update({f"fn_class_{i}": fn[i - start_class].item() for i in classes})
+        cm.update({f"tn_class_{i}": tn[i - start_class].item() for i in classes})
+
+        # Calculate means excluding NaNs
+        cm["tp"] = torch.nansum(tp).item()
+        cm["fp"] = torch.nansum(fp).item()
+        cm["fn"] = torch.nansum(fn).item()
+        cm["tn"] = torch.nansum(tn).item()
+
+        return cm
+
