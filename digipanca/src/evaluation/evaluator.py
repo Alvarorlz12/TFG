@@ -1,19 +1,15 @@
 import os
-import torch
 
 try:
     from tqdm.notebook import tqdm
 except ImportError:
     from tqdm import tqdm
-from torch.utils.data import DataLoader
-import torch.nn.functional as F
 
-from src.data.dataset2d import PancreasDataset2D
-from src.data.dataset3d import PancreasDataset3D
 from src.metrics.sma import SegmentationMetricsAccumulator as SMA
 from src.training.setup.transforms_factory import get_transforms
 from src.utils.export import write_csv_from_dict
 from src.utils.data import get_patients_in_processed_folder
+from src.inference.predicter import Predicter2D, Predicter3D
 
 class Evaluator:
     def __init__(self, model, config, test_dir, device):
@@ -24,6 +20,11 @@ class Evaluator:
         self.transform = get_transforms(config)
         self.sma_patient = SMA(include_background=False)
         self.sma_global = SMA(include_background=False)
+        self.test_dir = test_dir
+        if config['data'].get('is_3d', False):
+            self.predicter = Predicter3D(model, config, device, test_dir)
+        else:
+            self.predicter = Predicter2D(model, config, device, test_dir)
 
     def _export_results_to_csv(self, output_folder, metrics, cm):
         os.makedirs(output_folder, exist_ok=True)
@@ -102,128 +103,12 @@ class Evaluator:
         return all_metrics, all_cms
 
     def evaluate_patient(self, patient_id):
-        raise NotImplementedError("Implemented in subclasses")
-    
-class Evaluator2D(Evaluator):
-    def evaluate_patient(self, patient_id):
-        self.model.eval()
-
-        p_dataset = PancreasDataset2D(
-            data_dir=self.test_dir,
-            transform=self.transform,
-            load_into_memory=False,
-            patient_ids=[patient_id],
-            verbose=False
-        );
-
-        p_dl = DataLoader(
-            p_dataset,
-            batch_size=self.config['data']['batch_size'],
-            shuffle=False,
-            num_workers=self.config['data']['num_workers'],
-            pin_memory=True
-        )
-
-        patient_loop = tqdm(
-            p_dl,
-            leave=False,
-            colour="blue"
-        )
-        patient_loop.set_description(f"Patient {patient_id}")
-
-        all_preds = []
-        all_gts = []
-
-        with torch.no_grad():
-            for images, masks, _ in patient_loop:
-                images, masks = images.to(self.device), masks.to(self.device)
-
-                outputs = self.model(images)
-                
-                if isinstance(outputs, dict):
-                    outputs = outputs["out"]
-
-                all_preds.append(outputs)
-                all_gts.append(masks)
-
-        # Concatenate predictions and ground truths (from 2D slices to a single 3D volume)
-        all_preds = torch.cat(all_preds, dim=0).permute(1, 0, 2, 3).unsqueeze(0)
-        all_gts = torch.cat(all_gts, dim=0).unsqueeze(0)
+        # Get predictions and ground truth
+        pred_volume, gt_volume = self.predicter.predict_patient(patient_id)
 
         # Update metrics
-        _ = self.sma_patient.update(all_preds, all_gts) # Patient accumulator
-        _ = self.sma_global.update(all_preds, all_gts)  # Global accumulator
-
-        # Get aggregated scores and confusion matrix
-        p_metrics = self.sma_patient.aggregate()
-        p_cm = self.sma_patient.aggregate_global_cm()
-        
-        self.sma_patient.reset() # Reset patient accumulator
-
-        return p_metrics, p_cm
-    
-class Evaluator3D(Evaluator):
-    def evaluate_patient(self, patient_id):
-        self.model.eval()
-
-        p_dataset = PancreasDataset3D(
-            data_dir=self.test_dir,
-            transform=self.transform,
-            load_into_memory=False,
-            patient_ids=[patient_id],
-            verbose=False
-        );
-
-        p_dl = DataLoader(
-            p_dataset,
-            batch_size=self.config['data']['batch_size'],
-            shuffle=False,
-            num_workers=self.config['data']['num_workers'],
-            pin_memory=True
-        )
-
-        patient_loop = tqdm(
-            p_dl,
-            leave=False,
-            colour="blue"
-        )
-        patient_loop.set_description(f"Patient {patient_id}")
-
-        all_preds = []
-        all_slices = p_dataset.get_patient_subvolumes_slices(patient_id)
-        D = all_slices[-1][1] + 1 # add 1 to the total number of slices
-
-        with torch.no_grad():
-            for images, masks, _ in patient_loop:
-                images, masks = images.to(self.device), masks.to(self.device)
-
-                outputs = self.model(images)
-                
-                if isinstance(outputs, dict):
-                    outputs = outputs["out"]
-
-                all_preds.append(F.softmax(outputs, dim=1))
-
-        # Post-process: get a single 3D volume for the patient
-        all_preds = torch.cat(all_preds, dim=0)
-        print(all_preds.shape)
-        C, _, H, W = all_preds.shape[1:]
-        sum_probs = torch.zeros((C, D, H, W), dtype=torch.float64)
-        count = torch.zeros((D, H, W), dtype=torch.int8)
-
-        for i, (start, end) in enumerate(all_slices):
-            sum_probs[:, start:end+1, :, :] += all_preds[i]
-            count[start:end+1, :, :] += 1
-
-        avg_probs = sum_probs / count.unsqueeze(0)
-        pred_vol = avg_probs.unsqueeze(0) # B, C, D, H, W
-
-        # Get mask reconstruction
-        _, recon_mask = p_dataset.get_patient_volume(patient_id)
-
-        # Update metrics
-        _ = self.sma_patient.update(pred_vol, recon_mask) # Patient accumulator
-        _ = self.sma_global.update(pred_vol, recon_mask)  # Global accumulator
+        _ = self.sma_patient.update(pred_volume, gt_volume) # Patient accumulator
+        _ = self.sma_global.update(pred_volume, gt_volume)  # Global accumulator
 
         # Get aggregated scores and confusion matrix
         p_metrics = self.sma_patient.aggregate()

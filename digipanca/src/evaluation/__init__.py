@@ -1,6 +1,5 @@
-from .evaluator import Evaluator2D, Evaluator3D
+from .evaluator import Evaluator
 
 __all__ = [
-    "Evaluator2D",
-    "Evaluator3D"
+    "Evaluator"
 ]
