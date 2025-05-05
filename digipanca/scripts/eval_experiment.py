@@ -3,14 +3,12 @@ import glob
 import argparse
 import torch
 
-from pathlib import Path
-
 from src.data.split_data import load_train_test_split
 from src.utils.config import load_config
 from src.utils.evaluation import evaluate_model, load_trained_model
 
 def main():
-    parser = argparse.ArgumentParser(description="Experiemnt evaluation")
+    parser = argparse.ArgumentParser(description="Experiment evaluation")
 
     parser.add_argument(
         '--experiment_folder', type=str,

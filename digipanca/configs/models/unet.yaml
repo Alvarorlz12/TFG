@@ -1,6 +1,0 @@
-# unet fine-tuning config
-model:
-  type: unet
-  input_channels: 1
-  output_channels: 5
-  init_features: 32
