@@ -38,14 +38,14 @@ def main():
 
     # Search for fold directories
     folds = sorted(
-        d for d in os.listdir(args.experiment_path)
-        if os.path.isdir(os.path.join(args.experiment_path, d)) and d.startswith('fold_')
+        d for d in os.listdir(args.experiment_folder)
+        if os.path.isdir(os.path.join(args.experiment_folder, d)) and d.startswith('fold_')
     )
     if not folds:
         raise FileNotFoundError("No fold directories found in the experiment folder.")
     
     for fold in folds:
-        fold_dir = os.path.join(args.experiment_path, fold)
+        fold_dir = os.path.join(args.experiment_folder, fold)
         ckpt_dir = os.path.join(fold_dir, 'checkpoints')
 
         # Find best model checkpoint(s)
