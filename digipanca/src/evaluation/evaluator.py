@@ -1,9 +1,6 @@
 import os
 
-try:
-    from tqdm.notebook import tqdm
-except ImportError:
-    from tqdm import tqdm
+from tqdm.auto import tqdm
 
 from src.metrics.sma import SegmentationMetricsAccumulator as SMA
 from src.training.setup.transforms_factory import get_transforms

@@ -1,10 +1,7 @@
 import os
 import torch
 
-try:
-    from tqdm.notebook import tqdm
-except ImportError:
-    from tqdm import tqdm
+from tqdm.auto import tqdm
 from torch.utils.data import DataLoader
 import torch.nn.functional as F
 
