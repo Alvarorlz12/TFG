@@ -1,6 +1,6 @@
 import torch
 
-from src.utils.data import convert_to_one_hot
+from src.utils.tensors import convert_to_one_hot
 
 class SegmentationMetricsAccumulator:
     """

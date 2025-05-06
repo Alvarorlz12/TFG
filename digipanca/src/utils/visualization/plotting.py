@@ -1,11 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
-import matplotlib.colors as mcolors
 
-# Colormap and normalization for the segmentation mask
-CMAP = mcolors.ListedColormap(['green', 'purple', 'red', 'blue'])
-BOUNDARIES = [0.5, 1.5, 2.5, 3.5, 4.5]
-NORM = mcolors.BoundaryNorm(BOUNDARIES, CMAP.N)
+from .colormaps import CMAP, NORM, CLASS_LABELS
 
 def _plot_patient_slice(image, mask, patient_id, alpha=0.5):
     """
