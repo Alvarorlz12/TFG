@@ -5,7 +5,6 @@ import json
 from tqdm import tqdm
 
 from src.training.callbacks import ModelCheckpoint, EarlyStopping
-from src.metrics.segmentation import SegmentationMetrics
 from src.metrics.sma import SegmentationMetricsAccumulator as SMA
 from src.utils.checkpoints import load_checkpoint
 
@@ -30,7 +29,8 @@ class Trainer:
         train_loader : torch.utils.data.DataLoader
             DataLoader for training data.
         val_loader : torch.utils.data.DataLoader
-            DataLoader for validation data.
+            DataLoader for validation data. If None, no validation is performed,
+            the only usable method is `fit`.
         config : dict
             Configuration dictionary.
         experiment_dir : str
@@ -273,6 +273,8 @@ class Trainer:
         Train the model for the specified number of epochs and return the
         training and validation losses.
         """
+        if self.val_loader is None:
+            raise ValueError("Validation loader is not provided. Use `fit` method instead.")
         loop = tqdm(
             range(self.start_epoch, self.num_epochs),
             colour="red",
@@ -348,3 +350,115 @@ class Trainer:
             "best_model": self.checkpoint_callback.get_best_model_performance(),
             "training_time": total_time
         })
+
+    def fit(self, num_epochs, save_path=None):
+        """
+        Train the model for the specified number of epochs without validation.
+        Simply fits the model to the training data and saves weights to the specified path.
+        
+        Parameters
+        ----------
+        num_epochs : int
+            Number of epochs to train for.
+        save_path : str, optional
+            Path where to save the model weights. If None, weights won't be saved.
+            
+        Returns
+        -------
+        float
+            Final training loss.
+        dict
+            Final training metrics.
+        """
+        loop = tqdm(
+            range(num_epochs),
+            colour="yellow",
+            total=num_epochs    
+        )
+        loop.set_description(f"Simple fit - Epoch [0/{num_epochs}]")
+        loop.set_postfix(train_loss="N/A", train_dice="N/A")
+        
+        start_time = time.time()
+        final_metrics = {}
+        final_loss = 0.0
+        
+        try:
+            for epoch in loop:
+                self.model.train()
+                train_loss = 0.0
+                train_loop = tqdm(
+                    self.train_loader,
+                    desc=f"[Training {epoch+1}/{num_epochs}]",
+                    leave=False,
+                    colour="green"
+                )
+
+                for images, masks, _ in train_loop:
+                    images = images.to(self.device)
+                    masks = masks.to(self.device)
+
+                    self.optimizer.zero_grad()
+                    outputs = self.model(images)
+                    if isinstance(outputs, dict):
+                        outputs = outputs["out"]
+
+                    loss = self.loss_fn(outputs, masks)
+                    # Check if loss is CombinedLoss which returns a tuple of losses
+                    if isinstance(loss, tuple):
+                        loss = loss[0]  # Use only the first loss
+
+                    loss.backward()
+                    self.optimizer.step()
+
+                    train_loss += loss.item()
+                    batch_metrics = self.metrics.update(outputs.detach(), masks)
+
+                    if self.logger:
+                        self.logger.log(
+                            {"simple_fit_loss": loss.item(), **batch_metrics},
+                            step=epoch+1
+                        )
+
+                    train_loop.set_postfix(
+                        loss=f"{loss.item():.4f}",
+                        dice=f"{batch_metrics.get('dice', 0):.4f}"
+                    )
+
+                    # Free up memory
+                    del images, masks, outputs, loss
+                    torch.cuda.empty_cache()
+                
+                all_metrics = self.metrics.aggregate()
+                self.metrics.reset()
+                train_metrics = {
+                    k: v for k, v in all_metrics.items()
+                }
+                avg_loss = train_loss / len(self.train_loader)
+                final_loss = avg_loss
+                final_metrics = train_metrics
+                
+                # Update progress bar
+                loop.set_description(f"Simple fit - Epoch [{epoch+1}/{num_epochs}]")
+                loop.set_postfix(
+                    train_loss=f"{avg_loss:.4f}",
+                    train_dice=f"{train_metrics.get('dice', 0):.4f}"
+                )
+            
+            # Save the model weights if a path is specified
+            if save_path:
+                # Ensure the directory exists
+                os.makedirs(os.path.dirname(save_path), exist_ok=True)
+                # Save only the model's state_dict
+                torch.save(self.model.state_dict(), save_path)
+                print(f"Model weights saved to {save_path}")
+                
+        except Exception as e:
+            tqdm.write(f"An error occurred during simple fitting: {str(e)}")
+            raise e
+
+        total_time = time.time() - start_time
+        hours, rem = divmod(total_time, 3600)
+        minutes, seconds = divmod(rem, 60)
+        tqdm.write(f"Simple fitting completed in {int(hours):0>2}:{int(minutes):0>2}:{seconds:05.2f}")
+        
+        return final_loss, final_metrics
