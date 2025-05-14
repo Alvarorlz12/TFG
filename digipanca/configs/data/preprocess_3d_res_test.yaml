@@ -1,0 +1,14 @@
+data:
+  root_dir: "data"
+  raw_dir: "raw/test"
+  is_2d: false
+  processed_dir: "processed/3d_res"
+  target_spacing: [0.8, 0.8, 1.0]
+  subvolume_size: 16
+  subvolume_stride: 1
+  target_orientation: ['R', 'P', 'S']
+  roi:
+    w_min: 158
+    w_max: 414
+    h_min: 114
+    h_max: 370

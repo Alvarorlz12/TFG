@@ -4,17 +4,14 @@ import argparse
 import torch
 import json
 import torch
-import numpy as np
 
 from pathlib import Path
 from torch.utils.data import DataLoader
 from datetime import datetime
 
-from src.data.split_manager import SplitManager
 from src.utils.config import load_config
 from src.training.trainer import Trainer, _SUMMARY
 from src.utils.logger import Logger
-from src.utils.notifier import Notifier
 from src.training.setup import (
     get_model,
     get_loss_fn,
@@ -36,9 +33,9 @@ def main():
                         help='Path to configuration file')
     parser.add_argument('--experiment', type=str, required=True,
                         help='Experiment name')
-    parser.add_argument('--num_epochs', type=int, default=100,
+    parser.add_argument('--num_epochs', type=int, default=None,
                         help='Number of epochs to fit the model')
-    parser.add_argument('--save_path', type=str, required=True,
+    parser.add_argument('--save_path', type=str, default=None,
                         help='Path to save the model weights')
     args = parser.parse_args()
 
@@ -48,6 +45,14 @@ def main():
     
     # Load configuration
     config = load_config(args.config)
+
+    # Set number of epochs and save path
+    if args.num_epochs is None:
+        args.num_epochs = config['training']['num_epochs']
+    DEFAULT_WEIGHTS_BASE_DIR = 'models/weights'
+    if args.save_path is None:
+        config_name = os.path.basename(args.config).split('.')[0] + '.pth'
+        args.save_path = os.path.join(DEFAULT_WEIGHTS_BASE_DIR, config_name)
 
     # Set random seed for reproducibility
     seed = config['training'].get('seed', 42)
@@ -133,7 +138,7 @@ def main():
         'config_file': args.config,
         'model_type': config['model']['type'] + 
             (' (MONAI)' if config['model'].get('use_monai', False) else ''),
-        'epochs': config['training']['num_epochs'],
+        'epochs': args.num_epochs,
         'batch_size': config['data']['batch_size'],
         'learning_rate': config['training']['learning_rate'],
         'optimizer': 'AdamW',

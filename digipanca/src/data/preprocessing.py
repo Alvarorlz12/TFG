@@ -7,51 +7,9 @@ import nibabel as nib
 from scipy.ndimage import zoom
 from nibabel.processing import resample_from_to
 from nibabel.orientations import apply_orientation
+from src.utils.data import save_npy, save_png
 
 import src.data.transforms as transforms
-
-def load_nifti(file_path):
-    """
-    Load a NIfTI file from the given file path.
-
-    Parameters
-    ----------
-    file_path : str
-        Path to the NIfTI file.
-
-    Returns
-    -------
-    np.ndarray
-        NIfTI image data.
-    """
-    nifti = nib.load(file_path)
-    return nifti.get_fdata(), nifti.affine
-
-def save_npy(array, file_path):
-    """
-    Save a NumPy array to the given file path.
-
-    Parameters
-    ----------
-    array : np.ndarray
-        Array to save.
-    file_path : str
-        Path to save the array.
-    """
-    np.save(file_path, array)
-
-def save_png(image, file_path):
-    """
-    Save an image to the given file path.
-
-    Parameters
-    ----------
-    image : np.ndarray
-        Image to save.
-    file_path : str
-        Path to save the image.
-    """
-    cv2.imwrite(file_path, image)
 
 def pad_volume(volume, target_size):
     """Pad a 3D volume along the Z-axis to match the target size."""
@@ -558,3 +516,91 @@ def normalize(image):
     if image.max() == image.min():
         return image
     return (image - image.min()) / (image.max() - image.min())
+
+def reverse_preprocess_mask(
+    mask,
+    current_spacing,
+    original_affine,
+    h_min=0, h_max=512,
+    w_min=0, w_max=512,
+    rotation_axes=(0, 1),
+    orientation_transform=None,
+    original_spacing=None
+):
+    """
+    Reverse the preprocessing steps applied to the mask. This includes
+    resampling, reorienting, and rotating the mask back to its original
+    orientation and spacing.
+
+    Parameters
+    ----------
+    mask : np.ndarray
+        Mask to reverse preprocess. It must be a 3D array with shape (D, H, W).
+    current_spacing : tuple of float
+        Current spacing of the mask.
+    original_affine : np.ndarray
+        Original affine transformation matrix.
+    h_min : int, optional
+        Minimum height of the ROI applied, by default 0.
+    h_max : int, optional
+        Maximum height of the ROI applied, by default 512.
+    w_min : int, optional
+        Minimum width of the ROI applied, by default 0.
+    w_max : int, optional
+        Maximum width of the ROI applied, by default 512.
+    rotation_axes : tuple of int, optional
+        Axes to rotate the mask, by default (0, 1).
+    orientation_transform : np.ndarray, optional
+        Orientation transformation matrix, by default None. If None, no
+        reorientation is applied.
+    original_spacing : tuple of float, optional
+        Original spacing of the mask. If None, it is saved with the current
+        spacing. If specified, the mask is resampled to this spacing.
+
+    Returns
+    -------
+    np.ndarray
+        Reverse preprocessed mask.
+    np.ndarray
+        Affine transformation matrix of the reverse preprocessed mask.
+    """
+    # Ensure the mask is a 3D array and a Numpy array
+    if not isinstance(mask, np.ndarray):
+        raise ValueError("Mask must be a NumPy array.")
+    if mask.ndim != 3:
+        raise ValueError("Mask must be a 3D array.")
+        
+    # Transpose the mask: (D, H, W) -> (H, W, D)
+    mask = np.transpose(mask, (1, 2, 0))
+
+    # Undo the ROI focusing
+    full_mask = np.zeros((512, 512, mask.shape[2]), dtype=mask.dtype)
+    full_mask[h_min:h_max, w_min:w_max, :] = mask
+    mask = full_mask
+
+    # Undo the rotation
+    mask = np.rot90(mask, k=1, axes=rotation_axes)
+
+    # Undo the reorientation
+    if orientation_transform is not None:
+        mask = apply_orientation(mask, orientation_transform)
+
+    # Crop or pad the mask to size
+    if original_spacing is not None:
+        inverse_zoom_factors = np.array(original_spacing) / np.array(current_spacing)
+        target_size = np.round(512 * inverse_zoom_factors[0]).astype(np.int64)
+        mask = crop_or_pad_to_size(mask, (target_size, target_size))
+        # Resample the mask to the original spacing
+        mask = resample_mask_spacing(mask, original_spacing, current_spacing)
+        # New affine matrix is equivalent to the original affine matrix
+        mask_affine = original_affine.copy()
+    else:
+        # If original spacing is not provided, just crop or pad to size
+        mask = crop_or_pad_to_size(mask, (512, 512))
+        # New affine matrix must be updated to reflect the current spacing
+        mask_affine = update_affine(original_affine, current_spacing)
+
+    return mask, mask_affine
+
+    
+

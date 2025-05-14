@@ -85,8 +85,6 @@ def preprocess_data(config_path='configs/data/preprocess.yaml'):
         SUBVOLUME_SIZE = config["data"]["subvolume_size"]
         SUBVOLUME_STRIDE = config["data"]["subvolume_stride"]
 
-    # Clear the processed data directory
-    clear_directory(PROCESSED_DATA_DIR)
 
     # Load all patient from the raw data directory
     sample_dirs = [
@@ -95,6 +93,8 @@ def preprocess_data(config_path='configs/data/preprocess.yaml'):
 
     output_folder = os.path.basename(RAW_DATA_DIR)
     output_dir = os.path.join(PROCESSED_DATA_DIR, output_folder)
+    # Clear the processed data directory
+    clear_directory(output_dir)
     os.makedirs(output_dir, exist_ok=True)
     metadata = {}
     

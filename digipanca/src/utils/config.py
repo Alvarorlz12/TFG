@@ -36,3 +36,22 @@ def load_config(config_path="configs/data/default.yaml"):
                                                value)
 
     return config
+
+def read_config(config_path):
+    """
+    Read the configuration file from the given path.
+
+    Parameters
+    ----------
+    config_path : str
+        Path to the configuration file.
+
+    Returns
+    -------
+    dict
+        Configuration dictionary.
+    """
+    with open(config_path, "r") as file:
+        config = yaml.safe_load(file)
+    
+    return config
