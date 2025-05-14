@@ -111,24 +111,24 @@ def main():
         predictions, masks = predicter.predict_patient(patient_id)
 
         # Create and save the animation
-        # volume, _ = dataset.get_patient_volume(patient_id)
-        # create_2d_animation(
-        #     predictions,
-        #     masks,
-        #     patient_id,
-        #     output_dir=patient_dir,
-        #     volume=None,
-        #     filename=f'{patient_id}_no_volume.gif',
-        #     alpha=0.8
-        # )
-        # create_2d_animation(
-        #     predictions,
-        #     masks,
-        #     patient_id,
-        #     output_dir=patient_dir,
-        #     volume=volume,
-        #     filename=f'{patient_id}_with_volume.gif'
-        # )
+        volume, _ = dataset.get_patient_volume(patient_id)
+        create_2d_animation(
+            predictions,
+            masks,
+            patient_id,
+            output_dir=patient_dir,
+            volume=None,
+            filename=f'{patient_id}_no_volume.gif',
+            alpha=0.8
+        )
+        create_2d_animation(
+            predictions,
+            masks,
+            patient_id,
+            output_dir=patient_dir,
+            volume=volume,
+            filename=f'{patient_id}_with_volume.gif'
+        )
 
         if not args.save_masks:
             continue

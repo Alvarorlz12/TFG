@@ -25,6 +25,7 @@ data/raw/*
 data/processed/*
 data/test/*
 data/resampled/*
+data/prepared/*
 experiments/*/*
 
 # Models
