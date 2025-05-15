@@ -3,7 +3,7 @@ import argparse
 import torch
 
 from src.utils.config import load_config
-from src.utils.evaluation import evaluate_model, load_trained_model
+from src.utils.evaluation import evaluate_model, load_fitted_model
 
 def main():
     parser = argparse.ArgumentParser(description="Model evaluation on test set")
@@ -38,7 +38,7 @@ def main():
     if not os.path.exists(test_dir):
         raise FileNotFoundError(f"Test directory {test_dir} does not exist.")
     
-    model = load_trained_model(config, args.model_path).to(device)
+    model = load_fitted_model(config, args.model_path).to(device)
     evaluate_model(model, config, args.output_dir, device, test_dir)
 
 if __name__ == '__main__':

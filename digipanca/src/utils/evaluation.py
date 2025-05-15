@@ -68,3 +68,32 @@ def load_trained_model(config, checkpoint_path):
     )
     model.eval()
     return model
+
+def load_fitted_model(config, weights_path):
+    """
+    Load the model from the fitted weights path. The model is initialized with the
+    configuration parameters and the state_dict is loaded from the weights file.
+
+    Parameters
+    ----------
+    config : dict
+        Configuration dictionary containing model parameters.
+    weights_path : str
+        Path to the model weights file.
+
+    Returns
+    -------
+    torch.nn.Module
+        The loaded model.
+    """
+    # Set pretrained=False and load model
+    config['model']['pretrained'] = False
+    model = get_model(config)
+
+    model_state_dict = torch.load(weights_path, map_location='cpu')
+    model.load_state_dict(
+        {k: v for k, v in model_state_dict.items() if "aux_classifier" not in k},
+        strict=False
+    )
+    model.eval()
+    return model
