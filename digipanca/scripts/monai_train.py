@@ -1,4 +1,5 @@
 import os
+import csv
 import numpy as np
 from tqdm.auto import tqdm
 import torch
@@ -146,6 +147,11 @@ def main():
     best_metric_epoch = -1
     epochs_no_improve = 0
 
+    # Save loss and metric values for plotting
+    train_losses = []
+    val_losses = []
+    val_dice_scores = []
+
     print("🚀 Training...")
     for epoch in range(max_epochs):
         model.train()
@@ -163,11 +169,14 @@ def main():
             train_bar.set_postfix(loss=loss.item())
         
         print(f"✅ Epoch {epoch+1} - Mean loss: {epoch_loss / len(train_loader):.4f}")
+        epoch_train_loss = epoch_loss / len(train_loader)
+        train_losses.append(epoch_train_loss)
 
         # Validation
         if (epoch + 1) % val_interval == 0:
             model.eval()
             dice_metric.reset()
+            val_loss_epoch = 0
             with torch.no_grad():
                 val_bar = tqdm(val_loader, desc="🧪 Validating", leave=False)
                 for val_data in val_bar:
@@ -178,8 +187,14 @@ def main():
                     val_outputs = torch.argmax(val_outputs, dim=1, keepdim=True)
                     val_labels = torch.unsqueeze(val_labels, 1)
                     dice_metric(y_pred=val_outputs, y=val_labels)
+                    val_loss = loss_fn(val_outputs, val_labels)
+                    val_loss_epoch += val_loss.item()
+
+            val_loss_epoch /= len(val_loader)
+            val_losses.append(val_loss_epoch)
 
             mean_dice, _ = dice_metric.aggregate()
+            val_dice_scores.append(mean_dice.item())
             print(f"📊 Validation Mean Dice: {mean_dice:.4f}")
             dice_metric.reset()
 
@@ -203,6 +218,20 @@ def main():
         torch.save(model.state_dict(), os.path.join(model_dir, "last_model.pth"))
 
     print(f"🎯 Training finished. Best Dice: {best_metric:.4f} at epoch {best_metric_epoch}")
+
+    metrics_path = os.path.join(model_dir, "metrics.csv")
+    with open(metrics_path, mode="w", newline="") as csv_file:
+        writer = csv.writer(csv_file)
+        writer.writerow(["epoch", "train_loss", "val_loss", "val_dice"])
+        for i in range(len(train_losses)):
+            writer.writerow([
+                i + 1,
+                train_losses[i],
+                val_losses[i],
+                val_dice_scores[i]
+            ])
+
+    print(f"📁 Metrics saved to {metrics_path}")
 
 if __name__ == "__main__":
     # Run the training script
