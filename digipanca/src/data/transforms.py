@@ -2,6 +2,7 @@ import cv2
 import torch
 import numpy as np
 import nibabel as nib
+import monai.transforms as mt
 
 from nibabel.orientations import axcodes2ornt, io_orientation, ornt_transform, apply_orientation
 
@@ -218,3 +219,49 @@ standard_transforms = Compose([
     Resize(size=(512, 512)),
     ToTensor()
 ])
+#endregion
+
+#region MONAI TRANSFORMS
+_MONAI_TRANSFORMS = {
+    'LoadImaged': mt.LoadImaged,
+    'EnsureChannelFirstd': mt.EnsureChannelFirstd,
+    'Spacingd': mt.Spacingd,
+    'Orientationd': mt.Orientationd,
+    'ScaleIntensityRanged': mt.ScaleIntensityRanged,
+    'RandCropByPosNegLabeld': mt.RandCropByPosNegLabeld,
+    'RandFlipd': mt.RandFlipd,
+    'RandRotate90d': mt.RandRotate90d,
+    'RandShiftIntensityd': mt.RandShiftIntensityd,
+    'RandGaussianNoised': mt.RandGaussianNoised,
+    'ToTensord': mt.ToTensord
+}
+
+def build_monai_transforms_from_config(config):
+    """
+    Build a MONAI transforms pipeline from a configuration list of dictionaries.
+
+    Parameters
+    ----------
+    config : List[Dict]
+        The configuration list of dictionaries.
+
+    Returns
+    -------
+    Compose
+        The transforms pipeline.
+    """
+    if config is None:
+        return None
+    
+    transforms_list = []
+    for transform in config:
+        name, params = list(transform.items())[0]  # Get the name and parameters
+        transform_class = _MONAI_TRANSFORMS.get(name)
+
+        if transform_class:
+            transform_instance = transform_class(**(params or {}))
+            transforms_list.append(transform_instance)
+        else:
+            print(f"⚠️ Unknown MONAI transform: {name}")
+
+    return mt.Compose(transforms_list)

@@ -1,0 +1,472 @@
+{
+    "training": [
+        {
+            "label": "labelsTr\\rtum001.nii.gz",
+            "image": "imagesTr\\rtum001.nii.gz"
+        },
+        {
+            "label": "labelsTr\\rtum002.nii.gz",
+            "image": "imagesTr\\rtum002.nii.gz"
+        },
+        {
+            "label": "labelsTr\\rtum003.nii.gz",
+            "image": "imagesTr\\rtum003.nii.gz"
+        },
+        {
+            "label": "labelsTr\\rtum004.nii.gz",
+            "image": "imagesTr\\rtum004.nii.gz"
+        },
+        {
+            "label": "labelsTr\\rtum005.nii.gz",
+            "image": "imagesTr\\rtum005.nii.gz"
+        },
+        {
+            "label": "labelsTr\\rtum006.nii.gz",
+            "image": "imagesTr\\rtum006.nii.gz"
+        },
+        {
+            "label": "labelsTr\\rtum007.nii.gz",
+            "image": "imagesTr\\rtum007.nii.gz"
+        },
+        {
+            "label": "labelsTr\\rtum008.nii.gz",
+            "image": "imagesTr\\rtum008.nii.gz"
+        },
+        {
+            "label": "labelsTr\\rtum009.nii.gz",
+            "image": "imagesTr\\rtum009.nii.gz"
+        },
+        {
+            "label": "labelsTr\\rtum010.nii.gz",
+            "image": "imagesTr\\rtum010.nii.gz"
+        },
+        {
+            "label": "labelsTr\\rtum011.nii.gz",
+            "image": "imagesTr\\rtum011.nii.gz"
+        },
+        {
+            "label": "labelsTr\\rtum012.nii.gz",
+            "image": "imagesTr\\rtum012.nii.gz"
+        },
+        {
+            "label": "labelsTr\\rtum013.nii.gz",
+            "image": "imagesTr\\rtum013.nii.gz"
+        },
+        {
+            "label": "labelsTr\\rtum014.nii.gz",
+            "image": "imagesTr\\rtum014.nii.gz"
+        },
+        {
+            "label": "labelsTr\\rtum015.nii.gz",
+            "image": "imagesTr\\rtum015.nii.gz"
+        },
+        {
+            "label": "labelsTr\\rtum016.nii.gz",
+            "image": "imagesTr\\rtum016.nii.gz"
+        },
+        {
+            "label": "labelsTr\\rtum017.nii.gz",
+            "image": "imagesTr\\rtum017.nii.gz"
+        },
+        {
+            "label": "labelsTr\\rtum018.nii.gz",
+            "image": "imagesTr\\rtum018.nii.gz"
+        },
+        {
+            "label": "labelsTr\\rtum019.nii.gz",
+            "image": "imagesTr\\rtum019.nii.gz"
+        },
+        {
+            "label": "labelsTr\\rtum020.nii.gz",
+            "image": "imagesTr\\rtum020.nii.gz"
+        },
+        {
+            "label": "labelsTr\\rtum021.nii.gz",
+            "image": "imagesTr\\rtum021.nii.gz"
+        },
+        {
+            "label": "labelsTr\\rtum022.nii.gz",
+            "image": "imagesTr\\rtum022.nii.gz"
+        },
+        {
+            "label": "labelsTr\\rtum023.nii.gz",
+            "image": "imagesTr\\rtum023.nii.gz"
+        },
+        {
+            "label": "labelsTr\\rtum024.nii.gz",
+            "image": "imagesTr\\rtum024.nii.gz"
+        },
+        {
+            "label": "labelsTr\\rtum025.nii.gz",
+            "image": "imagesTr\\rtum025.nii.gz"
+        },
+        {
+            "label": "labelsTr\\rtum026.nii.gz",
+            "image": "imagesTr\\rtum026.nii.gz"
+        },
+        {
+            "label": "labelsTr\\rtum027.nii.gz",
+            "image": "imagesTr\\rtum027.nii.gz"
+        },
+        {
+            "label": "labelsTr\\rtum028.nii.gz",
+            "image": "imagesTr\\rtum028.nii.gz"
+        },
+        {
+            "label": "labelsTr\\rtum029.nii.gz",
+            "image": "imagesTr\\rtum029.nii.gz"
+        },
+        {
+            "label": "labelsTr\\rtum030.nii.gz",
+            "image": "imagesTr\\rtum030.nii.gz"
+        },
+        {
+            "label": "labelsTr\\rtum031.nii.gz",
+            "image": "imagesTr\\rtum031.nii.gz"
+        },
+        {
+            "label": "labelsTr\\rtum032.nii.gz",
+            "image": "imagesTr\\rtum032.nii.gz"
+        },
+        {
+            "label": "labelsTr\\rtum033.nii.gz",
+            "image": "imagesTr\\rtum033.nii.gz"
+        },
+        {
+            "label": "labelsTr\\rtum034.nii.gz",
+            "image": "imagesTr\\rtum034.nii.gz"
+        },
+        {
+            "label": "labelsTr\\rtum035.nii.gz",
+            "image": "imagesTr\\rtum035.nii.gz"
+        },
+        {
+            "label": "labelsTr\\rtum036.nii.gz",
+            "image": "imagesTr\\rtum036.nii.gz"
+        },
+        {
+            "label": "labelsTr\\rtum037.nii.gz",
+            "image": "imagesTr\\rtum037.nii.gz"
+        },
+        {
+            "label": "labelsTr\\rtum038.nii.gz",
+            "image": "imagesTr\\rtum038.nii.gz"
+        },
+        {
+            "label": "labelsTr\\rtum039.nii.gz",
+            "image": "imagesTr\\rtum039.nii.gz"
+        },
+        {
+            "label": "labelsTr\\rtum040.nii.gz",
+            "image": "imagesTr\\rtum040.nii.gz"
+        },
+        {
+            "label": "labelsTr\\rtum041.nii.gz",
+            "image": "imagesTr\\rtum041.nii.gz"
+        },
+        {
+            "label": "labelsTr\\rtum042.nii.gz",
+            "image": "imagesTr\\rtum042.nii.gz"
+        },
+        {
+            "label": "labelsTr\\rtum043.nii.gz",
+            "image": "imagesTr\\rtum043.nii.gz"
+        },
+        {
+            "label": "labelsTr\\rtum044.nii.gz",
+            "image": "imagesTr\\rtum044.nii.gz"
+        },
+        {
+            "label": "labelsTr\\rtum045.nii.gz",
+            "image": "imagesTr\\rtum045.nii.gz"
+        },
+        {
+            "label": "labelsTr\\rtum046.nii.gz",
+            "image": "imagesTr\\rtum046.nii.gz"
+        },
+        {
+            "label": "labelsTr\\rtum047.nii.gz",
+            "image": "imagesTr\\rtum047.nii.gz"
+        },
+        {
+            "label": "labelsTr\\rtum048.nii.gz",
+            "image": "imagesTr\\rtum048.nii.gz"
+        },
+        {
+            "label": "labelsTr\\rtum049.nii.gz",
+            "image": "imagesTr\\rtum049.nii.gz"
+        },
+        {
+            "label": "labelsTr\\rtum050.nii.gz",
+            "image": "imagesTr\\rtum050.nii.gz"
+        },
+        {
+            "label": "labelsTr\\rtum051.nii.gz",
+            "image": "imagesTr\\rtum051.nii.gz"
+        },
+        {
+            "label": "labelsTr\\rtum052.nii.gz",
+            "image": "imagesTr\\rtum052.nii.gz"
+        },
+        {
+            "label": "labelsTr\\rtum053.nii.gz",
+            "image": "imagesTr\\rtum053.nii.gz"
+        },
+        {
+            "label": "labelsTr\\rtum054.nii.gz",
+            "image": "imagesTr\\rtum054.nii.gz"
+        },
+        {
+            "label": "labelsTr\\rtum055.nii.gz",
+            "image": "imagesTr\\rtum055.nii.gz"
+        },
+        {
+            "label": "labelsTr\\rtum056.nii.gz",
+            "image": "imagesTr\\rtum056.nii.gz"
+        },
+        {
+            "label": "labelsTr\\rtum057.nii.gz",
+            "image": "imagesTr\\rtum057.nii.gz"
+        },
+        {
+            "label": "labelsTr\\rtum058.nii.gz",
+            "image": "imagesTr\\rtum058.nii.gz"
+        },
+        {
+            "label": "labelsTr\\rtum059.nii.gz",
+            "image": "imagesTr\\rtum059.nii.gz"
+        },
+        {
+            "label": "labelsTr\\rtum060.nii.gz",
+            "image": "imagesTr\\rtum060.nii.gz"
+        },
+        {
+            "label": "labelsTr\\rtum061.nii.gz",
+            "image": "imagesTr\\rtum061.nii.gz"
+        },
+        {
+            "label": "labelsTr\\rtum062.nii.gz",
+            "image": "imagesTr\\rtum062.nii.gz"
+        },
+        {
+            "label": "labelsTr\\rtum063.nii.gz",
+            "image": "imagesTr\\rtum063.nii.gz"
+        },
+        {
+            "label": "labelsTr\\rtum064.nii.gz",
+            "image": "imagesTr\\rtum064.nii.gz"
+        },
+        {
+            "label": "labelsTr\\rtum065.nii.gz",
+            "image": "imagesTr\\rtum065.nii.gz"
+        },
+        {
+            "label": "labelsTr\\rtum066.nii.gz",
+            "image": "imagesTr\\rtum066.nii.gz"
+        },
+        {
+            "label": "labelsTr\\rtum067.nii.gz",
+            "image": "imagesTr\\rtum067.nii.gz"
+        },
+        {
+            "label": "labelsTr\\rtum068.nii.gz",
+            "image": "imagesTr\\rtum068.nii.gz"
+        },
+        {
+            "label": "labelsTr\\rtum069.nii.gz",
+            "image": "imagesTr\\rtum069.nii.gz"
+        },
+        {
+            "label": "labelsTr\\rtum070.nii.gz",
+            "image": "imagesTr\\rtum070.nii.gz"
+        }
+    ],
+    "validation": [
+        {
+            "label": "labelsTr\\rtum071.nii.gz",
+            "image": "imagesTr\\rtum071.nii.gz"
+        },
+        {
+            "label": "labelsTr\\rtum072.nii.gz",
+            "image": "imagesTr\\rtum072.nii.gz"
+        },
+        {
+            "label": "labelsTr\\rtum073.nii.gz",
+            "image": "imagesTr\\rtum073.nii.gz"
+        },
+        {
+            "label": "labelsTr\\rtum074.nii.gz",
+            "image": "imagesTr\\rtum074.nii.gz"
+        },
+        {
+            "label": "labelsTr\\rtum075.nii.gz",
+            "image": "imagesTr\\rtum075.nii.gz"
+        },
+        {
+            "label": "labelsTr\\rtum076.nii.gz",
+            "image": "imagesTr\\rtum076.nii.gz"
+        },
+        {
+            "label": "labelsTr\\rtum077.nii.gz",
+            "image": "imagesTr\\rtum077.nii.gz"
+        },
+        {
+            "label": "labelsTr\\rtum078.nii.gz",
+            "image": "imagesTr\\rtum078.nii.gz"
+        },
+        {
+            "label": "labelsTr\\rtum079.nii.gz",
+            "image": "imagesTr\\rtum079.nii.gz"
+        },
+        {
+            "label": "labelsTr\\rtum080.nii.gz",
+            "image": "imagesTr\\rtum080.nii.gz"
+        },
+        {
+            "label": "labelsTr\\rtum081.nii.gz",
+            "image": "imagesTr\\rtum081.nii.gz"
+        },
+        {
+            "label": "labelsTr\\rtum082.nii.gz",
+            "image": "imagesTr\\rtum082.nii.gz"
+        },
+        {
+            "label": "labelsTr\\rtum083.nii.gz",
+            "image": "imagesTr\\rtum083.nii.gz"
+        },
+        {
+            "label": "labelsTr\\rtum084.nii.gz",
+            "image": "imagesTr\\rtum084.nii.gz"
+        },
+        {
+            "label": "labelsTr\\rtum085.nii.gz",
+            "image": "imagesTr\\rtum085.nii.gz"
+        },
+        {
+            "label": "labelsTr\\rtum086.nii.gz",
+            "image": "imagesTr\\rtum086.nii.gz"
+        },
+        {
+            "label": "labelsTr\\rtum087.nii.gz",
+            "image": "imagesTr\\rtum087.nii.gz"
+        },
+        {
+            "label": "labelsTr\\rtum088.nii.gz",
+            "image": "imagesTr\\rtum088.nii.gz"
+        }
+    ],
+    "test": [
+        {
+            "label": "labelsTs\\rtum089.nii.gz",
+            "image": "imagesTs\\rtum089.nii.gz"
+        },
+        {
+            "label": "labelsTs\\rtum090.nii.gz",
+            "image": "imagesTs\\rtum090.nii.gz"
+        },
+        {
+            "label": "labelsTs\\rtum091.nii.gz",
+            "image": "imagesTs\\rtum091.nii.gz"
+        },
+        {
+            "label": "labelsTs\\rtum092.nii.gz",
+            "image": "imagesTs\\rtum092.nii.gz"
+        },
+        {
+            "label": "labelsTs\\rtum093.nii.gz",
+            "image": "imagesTs\\rtum093.nii.gz"
+        },
+        {
+            "label": "labelsTs\\rtum094.nii.gz",
+            "image": "imagesTs\\rtum094.nii.gz"
+        },
+        {
+            "label": "labelsTs\\rtum095.nii.gz",
+            "image": "imagesTs\\rtum095.nii.gz"
+        },
+        {
+            "label": "labelsTs\\rtum096.nii.gz",
+            "image": "imagesTs\\rtum096.nii.gz"
+        },
+        {
+            "label": "labelsTs\\rtum097.nii.gz",
+            "image": "imagesTs\\rtum097.nii.gz"
+        },
+        {
+            "label": "labelsTs\\rtum098.nii.gz",
+            "image": "imagesTs\\rtum098.nii.gz"
+        },
+        {
+            "label": "labelsTs\\rtum099.nii.gz",
+            "image": "imagesTs\\rtum099.nii.gz"
+        },
+        {
+            "label": "labelsTs\\rtum100.nii.gz",
+            "image": "imagesTs\\rtum100.nii.gz"
+        },
+        {
+            "label": "labelsTs\\rtum101.nii.gz",
+            "image": "imagesTs\\rtum101.nii.gz"
+        },
+        {
+            "label": "labelsTs\\rtum102.nii.gz",
+            "image": "imagesTs\\rtum102.nii.gz"
+        },
+        {
+            "label": "labelsTs\\rtum103.nii.gz",
+            "image": "imagesTs\\rtum103.nii.gz"
+        },
+        {
+            "label": "labelsTs\\rtum104.nii.gz",
+            "image": "imagesTs\\rtum104.nii.gz"
+        },
+        {
+            "label": "labelsTs\\rtum105.nii.gz",
+            "image": "imagesTs\\rtum105.nii.gz"
+        },
+        {
+            "label": "labelsTs\\rtum106.nii.gz",
+            "image": "imagesTs\\rtum106.nii.gz"
+        },
+        {
+            "label": "labelsTs\\rtum107.nii.gz",
+            "image": "imagesTs\\rtum107.nii.gz"
+        },
+        {
+            "label": "labelsTs\\rtum108.nii.gz",
+            "image": "imagesTs\\rtum108.nii.gz"
+        },
+        {
+            "label": "labelsTs\\rtum109.nii.gz",
+            "image": "imagesTs\\rtum109.nii.gz"
+        },
+        {
+            "label": "labelsTs\\rtum110.nii.gz",
+            "image": "imagesTs\\rtum110.nii.gz"
+        },
+        {
+            "label": "labelsTs\\rtum111.nii.gz",
+            "image": "imagesTs\\rtum111.nii.gz"
+        },
+        {
+            "label": "labelsTs\\rtum112.nii.gz",
+            "image": "imagesTs\\rtum112.nii.gz"
+        },
+        {
+            "label": "labelsTs\\rtum113.nii.gz",
+            "image": "imagesTs\\rtum113.nii.gz"
+        },
+        {
+            "label": "labelsTs\\rtum114.nii.gz",
+            "image": "imagesTs\\rtum114.nii.gz"
+        },
+        {
+            "label": "labelsTs\\rtum115.nii.gz",
+            "image": "imagesTs\\rtum115.nii.gz"
+        },
+        {
+            "label": "labelsTs\\rtum116.nii.gz",
+            "image": "imagesTs\\rtum116.nii.gz"
+        }
+    ]
+}

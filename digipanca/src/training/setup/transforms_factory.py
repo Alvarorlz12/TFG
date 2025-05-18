@@ -1,4 +1,4 @@
-from src.data.transforms import build_transforms_from_config
+from src.data.transforms import build_transforms_from_config, build_monai_transforms_from_config
 
 def get_transforms(config):
     """Initialize transforms based on configuration."""

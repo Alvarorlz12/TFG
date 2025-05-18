@@ -1,7 +1,11 @@
+import glob
 import os
 import argparse
 import shutil
 import json
+import monai
+
+from sklearn.model_selection import train_test_split
 
 from src.data.split_data import create_train_test_split, create_kfold_split
 from src.data.preprocessing import process_patient_3d, process_patient_2d
@@ -143,13 +147,66 @@ def preprocess_data(config_path='configs/data/preprocess.yaml'):
 
     print(f"✅ {output_folder} completed\n")
 
+def generate_datalist(data_dir, output, val_split=0.2):
+    """
+    Generate a datalist for the dataset.
+    
+    Parameters
+    ----------
+    data_dir : str
+        Path to the data directory. It must contain the following 
+        subdirectories: labelsTr, imagesTr, labelsTs, imagesTs.
+    output : str
+        Path to the output file.
+    """
+    # Check if the data directory exists
+    if not os.path.exists(data_dir):
+        raise FileNotFoundError(f"Data directory {data_dir} does not exist.")
+    
+    def produce_sample_dict(line):
+        return {"label": line, "image": line.replace("label", "image")}
+
+    monai.utils.set_determinism(seed=123)
+
+    # Create the datalist
+    datalist = []
+    test_list = []
+
+    samples = sorted(glob.glob(os.path.join(data_dir, "labelsTr", "*"), recursive=True))
+    samples = [_item.replace(os.path.join(data_dir, "labelsTr"), "labelsTr") for _item in samples]
+    for sample in samples:
+        datalist.append(produce_sample_dict(sample))
+
+    test_samples = sorted(glob.glob(os.path.join(data_dir, "labelsTs", "*"), recursive=True))
+    test_samples = [_item.replace(os.path.join(data_dir, "labelsTs"), "labelsTs") for _item in test_samples]
+    for sample in test_samples:
+        test_list.append(produce_sample_dict(sample))
+
+    train_list, val_list = train_test_split(
+        datalist,
+        test_size=val_split,
+        random_state=42,
+        shuffle=False
+    )
+
+    # Create the final datalist
+    datalist = {
+        "training": train_list,
+        "validation": val_list,
+        "test": test_list
+    }
+
+    # Save the datalist to a JSON file
+    with open(output, "w") as f:
+        json.dump(datalist, f, ensure_ascii=True, indent=4)
+
 
 def main():
     parser = argparse.ArgumentParser(description="Data splitting and preprocessing script.")
     parser.add_argument(
         "--mode",
         type=str,
-        choices=["split", "preprocess"],
+        choices=["split", "preprocess", "datalist"],
         required=True,
         help="Mode of operation: split or preprocess."
     )
@@ -166,6 +223,11 @@ def main():
         generate_split() if args.config is None else generate_split(args.config)
     elif args.mode == "preprocess":
         preprocess_data() if args.config is None else preprocess_data(args.config)
+    elif args.mode == "datalist":
+        generate_datalist(
+            data_dir=os.path.join("data", "prepared"),
+            output=os.path.join("data/splits", "datalist.json")
+        )
 
 if __name__ == "__main__":
     main()

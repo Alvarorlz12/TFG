@@ -44,9 +44,9 @@ def get_model(config):
                 spatial_dims=3,
                 in_channels=config['model']['in_channels'],
                 out_channels=config['model']['out_channels'],
-                channels=[64, 128, 256, 512],
-                strides=[2, 2, 2],
-                num_res_units=3,
+                channels=[16, 32, 64, 128, 256],
+                strides=[2, 2, 2, 2],
+                num_res_units=2,
                 norm=Norm.BATCH
             )
         else:
