@@ -95,6 +95,8 @@ train:
     keys:
     - "@image_key"
     - "@label_key"
+    device: "@device"
+    track_meta: false
   - _target_: SpatialPadd
     keys:
     - "@image_key"
@@ -228,11 +230,11 @@ train:
     _target_: CacheDataset
     data: "@train_datalist"
     transform: "@train#preprocessing"
-    cache_rate: 0.65
+    cache_rate: 1.0
     num_workers: 4
-    copy_cache: false
+    copy_cache: true
   dataloader:
-    _target_: DataLoader
+    _target_: ThreadDataLoader
     dataset: "@train#dataset"
     batch_size: 2
     shuffle: true
@@ -298,9 +300,11 @@ validate:
     _target_: CacheDataset
     data: "@val_datalist"
     transform: "@validate#preprocessing"
-    cache_rate: 0.65
+    cache_rate: 1.0
+    num_workers: 4
+    copy_cache: true
   dataloader:
-    _target_: DataLoader
+    _target_: ThreadDataLoader
     dataset: "@validate#dataset"
     batch_size: 1
     shuffle: false
