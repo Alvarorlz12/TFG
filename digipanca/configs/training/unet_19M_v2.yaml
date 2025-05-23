@@ -237,7 +237,6 @@ train:
     batch_size: 2
     shuffle: true
     num_workers: 8
-    pin_memory: true
   inferer:
     _target_: SimpleInferer
   postprocessing:
