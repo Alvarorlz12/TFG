@@ -200,6 +200,53 @@ def generate_datalist(data_dir, output, val_split=0.2):
     with open(output, "w") as f:
         json.dump(datalist, f, ensure_ascii=True, indent=4)
 
+def generate_datalist_from_split_data(data_dir, split_data_path, output):
+    """
+    Generate a MONAI-compatible datalist using predefined train/val/test splits.
+
+    Parameters
+    ----------
+    data_dir : str
+        Base directory containing 'imagesTr', 'labelsTr', 'imagesTs' and 
+        'labelsTs'.
+    split_data_path : str
+        JSON file with keys 'training', 'validation', 'test', each containing 
+        CaseIDs (e.g., rtum001).
+    output : str
+        Output JSON path for the generated datalist.
+    """
+    with open(split_data_path, "r") as f:
+        splits = json.load(f)
+
+    def produce_sample_dict(line):
+        return {"label": line, "image": line.replace("label", "image")}
+    
+    train_list = []
+    val_list = []
+    test_list = []
+
+    for train_patient in splits['training']:
+        sample = os.path.join('labelsTr', f'{train_patient}.nii.gz')
+        train_list.append(produce_sample_dict(sample))
+
+    for val_patient in splits['validation']:
+        sample = os.path.join('labelsTr', f'{val_patient}.nii.gz')
+        val_list.append(produce_sample_dict(sample))
+
+    test_samples = sorted(glob.glob(os.path.join(data_dir, "labelsTs", "*"), recursive=True))
+    test_samples = [_item.replace(os.path.join(data_dir, "labelsTs"), "labelsTs") for _item in test_samples]
+    for sample in test_samples:
+        test_list.append(produce_sample_dict(sample))
+
+    # Create the final datalist
+    datalist = {
+        "training": train_list,
+        "validation": val_list,
+        "test": test_list
+    }
+    
+    with open(output, "w") as f:
+        json.dump(datalist, f, indent=4)
 
 def main():
     parser = argparse.ArgumentParser(description="Data splitting and preprocessing script.")
@@ -216,6 +263,18 @@ def main():
         default=None,
         help="Path to the configuration file (optional)."
     )
+    parser.add_argument(
+        "--split_data",
+        type=str,
+        default=None,
+        help="Path to split data JSON with CaseIDs for each set."
+    )
+    parser.add_argument(
+        "--output_name",
+        type=str,
+        default="datalist.json",
+        help="Datalist output file name. Defaults to 'datalist.json'."
+    )
 
     args = parser.parse_args()
 
@@ -224,10 +283,17 @@ def main():
     elif args.mode == "preprocess":
         preprocess_data() if args.config is None else preprocess_data(args.config)
     elif args.mode == "datalist":
-        generate_datalist(
-            data_dir=os.path.join("data", "prepared"),
-            output=os.path.join("data/splits", "datalist.json")
-        )
+        if args.split_data is not None:
+            generate_datalist_from_split_data(
+                data_dir=os.path.join("data", "prepared"),
+                output=os.path.join("data/splits", args.output_name),
+                split_data_path=args.split_data
+            )
+        else:   
+            generate_datalist(
+                data_dir=os.path.join("data", "prepared"),
+                output=os.path.join("data/splits", args.output_name)
+            )
 
 if __name__ == "__main__":
     main()
