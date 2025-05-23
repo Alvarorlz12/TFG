@@ -10,7 +10,7 @@ output_classes: 5
 bundle_root: "."
 ckpt_dir: "$@bundle_root + '/experiments/monai_bundle/unet_19M_v2/models'"
 output_dir: "$@bundle_root + '/experiments/monai_bundle/unet_19M_v2/runs'"
-dataset_dir: "data/prepared"
+dataset_dir: "data/prepared_2"
 data_list_file_path: "$@bundle_root + '/data/splits/dataset_0.json'"
 train_datalist: "$monai.data.load_decathlon_datalist(@data_list_file_path, data_list_key='training',
   base_dir=@dataset_dir)"
@@ -228,15 +228,15 @@ train:
     _target_: CacheDataset
     data: "@train_datalist"
     transform: "@train#preprocessing"
-    cache_rate: 0.3
-    num_workers: 4
+    cache_rate: 0.5
+    num_workers: 6
     copy_cache: false
   dataloader:
     _target_: DataLoader
     dataset: "@train#dataset"
     batch_size: 2
     shuffle: true
-    num_workers: 4
+    num_workers: 6
   inferer:
     _target_: SimpleInferer
   postprocessing:
@@ -298,7 +298,7 @@ validate:
     _target_: CacheDataset
     data: "@val_datalist"
     transform: "@validate#preprocessing"
-    cache_rate: 0.3
+    cache_rate: 0.5
   dataloader:
     _target_: DataLoader
     dataset: "@validate#dataset"
