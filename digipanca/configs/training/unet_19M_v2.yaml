@@ -229,14 +229,14 @@ train:
     data: "@train_datalist"
     transform: "@train#preprocessing"
     cache_rate: 0.4
-    num_workers: 6
+    num_workers: 4
     copy_cache: false
   dataloader:
     _target_: DataLoader
     dataset: "@train#dataset"
     batch_size: 2
     shuffle: true
-    num_workers: 6
+    num_workers: 4
   inferer:
     _target_: SimpleInferer
   postprocessing:
