@@ -228,7 +228,7 @@ train:
     _target_: CacheDataset
     data: "@train_datalist"
     transform: "@train#preprocessing"
-    cache_rate: 0.125
+    cache_rate: 0.65
     num_workers: 4
     copy_cache: false
   dataloader:
@@ -236,7 +236,7 @@ train:
     dataset: "@train#dataset"
     batch_size: 2
     shuffle: true
-    num_workers: 4
+    num_workers: 0
   inferer:
     _target_: SimpleInferer
   postprocessing:
@@ -298,13 +298,13 @@ validate:
     _target_: CacheDataset
     data: "@val_datalist"
     transform: "@validate#preprocessing"
-    cache_rate: 0.125
+    cache_rate: 0.65
   dataloader:
     _target_: DataLoader
     dataset: "@validate#dataset"
     batch_size: 1
     shuffle: false
-    num_workers: 4
+    num_workers: 0
   inferer:
     _target_: SlidingWindowInferer
     roi_size:
