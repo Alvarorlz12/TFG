@@ -228,7 +228,7 @@ train:
     _target_: CacheDataset
     data: "@train_datalist"
     transform: "@train#preprocessing"
-    cache_rate: 0.4
+    cache_rate: 0.3
     num_workers: 4
     copy_cache: false
   dataloader:
@@ -298,7 +298,7 @@ validate:
     _target_: CacheDataset
     data: "@val_datalist"
     transform: "@validate#preprocessing"
-    cache_rate: 0.4
+    cache_rate: 0.3
   dataloader:
     _target_: DataLoader
     dataset: "@validate#dataset"
