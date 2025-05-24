@@ -248,13 +248,22 @@ train:
   preprocessing:
     _target_: Compose
     transforms: "$@train#deterministic_transforms + @train#random_transforms"
-  dataset:
+  cache_dataset:
     _target_: CacheDataset
     data: "@train_datalist"
-    transform: "@train#preprocessing"
+    transform: 
+      _target_: Compose
+      transforms: "$@train#deterministic_transforms"
     cache_rate: 1.0
     num_workers: 4
     copy_cache: true
+  dataset:
+    _target_: Dataset
+    data: "@train#cache_dataset"
+    transform:
+      _target_: Compose
+      transforms: "$@train#random_transforms"
+    num_workers: 4
   dataloader:
     _target_: ThreadDataLoader
     dataset: "@train#dataset"
