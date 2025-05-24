@@ -132,6 +132,7 @@ train:
     keys:
     - "@image_key"
     - "@label_key"
+    - label4crop
     device: "@device"
     track_meta: false
   random_transforms:
@@ -248,21 +249,13 @@ train:
   preprocessing:
     _target_: Compose
     transforms: "$@train#deterministic_transforms + @train#random_transforms"
-  cache_dataset:
+  dataset:
     _target_: CacheDataset
     data: "@train_datalist"
-    transform: 
-      _target_: Compose
-      transforms: "$@train#deterministic_transforms"
+    transform: "@train#preprocessing"
     cache_rate: 1.0
     num_workers: 4
-    copy_cache: true
-  dataset:
-    _target_: Dataset
-    data: "@train#cache_dataset"
-    transform:
-      _target_: Compose
-      transforms: "$@train#random_transforms"
+    copy_cache: false
   dataloader:
     _target_: ThreadDataLoader
     dataset: "@train#dataset"
@@ -332,7 +325,7 @@ validate:
     transform: "@validate#preprocessing"
     cache_rate: 1.0
     num_workers: 4
-    copy_cache: true
+    copy_cache: false
   dataloader:
     _target_: ThreadDataLoader
     dataset: "@validate#dataset"
