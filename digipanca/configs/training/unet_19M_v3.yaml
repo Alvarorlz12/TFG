@@ -108,12 +108,6 @@ train:
     func: "$lambda x, s=@output_classes: np.concatenate(tuple([ndimage.binary_dilation((x==_k).astype(x.dtype),
       iterations=5).astype(float) for _k in range(s)]), axis=0)"
     overwrite: true
-  - _target_: EnsureTyped
-    keys:
-    - "@image_key"
-    - "@label_key"
-    device: "@device"
-    track_meta: false
   - _target_: CastToTyped
     keys: 
     - "@image_key"
@@ -134,6 +128,12 @@ train:
     - reflect
     - constant
     - constant
+  - _target_: EnsureTyped
+    keys:
+    - "@image_key"
+    - "@label_key"
+    device: "@device"
+    track_meta: false
   random_transforms:
   - _target_: RandCropByLabelClassesd
     keys:
@@ -147,6 +147,9 @@ train:
     - 96
     - 96
     num_samples: 2
+  - _target_: Lambdad
+    keys: label4crop
+    func: "$lambda x: 0"
   - _target_: Rand3DElasticd
     keys:
     - "@image_key"
