@@ -263,7 +263,6 @@ train:
     transform:
       _target_: Compose
       transforms: "$@train#random_transforms"
-    num_workers: 4
   dataloader:
     _target_: ThreadDataLoader
     dataset: "@train#dataset"
