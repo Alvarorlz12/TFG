@@ -109,12 +109,12 @@ train:
     - reflect
     - constant
   - _target_: CastToTyped
-    keys: 
+    keys:
     - "@image_key"
     - "@label_key"
-    dtype: 
-    - "$torch.float32"
-    - "$torch.uint8"
+    dtype:
+    - "$np.float16"
+    - "$np.uint8"
   - _target_: CopyItemsd
     keys: "@label_key"
     times: 1
@@ -125,6 +125,13 @@ train:
     func: "$lambda x, s=@output_classes: np.concatenate(tuple([ndimage.binary_dilation((x==_k).astype(x.dtype),
       iterations=5).astype(float) for _k in range(s)]), axis=0)"
     overwrite: true
+  - _target_: CastToTyped
+    keys: 
+    - "@image_key"
+    - "@label_key"
+    dtype: 
+    - "$torch.float32"
+    - "$torch.uint8"
   random_transforms:
   - _target_: RandCropByLabelClassesd
     keys:
