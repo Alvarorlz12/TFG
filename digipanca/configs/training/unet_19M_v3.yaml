@@ -115,7 +115,7 @@ train:
     dtype: 
     - "$torch.float32"
     - "$torch.uint8"
-    - _target_: CopyItemsd
+  - _target_: CopyItemsd
     keys: "@label_key"
     times: 1
     names:
