@@ -112,8 +112,10 @@ train:
     keys: 
     - "@image_key"
     - "@label_key"
+    - label4crop
     dtype: 
     - "$torch.float32"
+    - "$torch.uint8"
     - "$torch.uint8"
   - _target_: SpatialPadd
     keys:
@@ -132,7 +134,6 @@ train:
     keys:
     - "@image_key"
     - "@label_key"
-    - label4crop
     device: "@device"
     track_meta: false
   random_transforms:
@@ -148,9 +149,8 @@ train:
     - 96
     - 96
     num_samples: 2
-  - _target_: Lambdad
+  - _target_: DeleteItemsd
     keys: label4crop
-    func: "$lambda x: 0"
   - _target_: Rand3DElasticd
     keys:
     - "@image_key"
@@ -253,7 +253,7 @@ train:
     _target_: CacheDataset
     data: "@train_datalist"
     transform: "@train#preprocessing"
-    cache_rate: 0.125
+    cache_rate: 1.0
     num_workers: 4
     copy_cache: false
   dataloader:
@@ -323,7 +323,7 @@ validate:
     _target_: CacheDataset
     data: "@val_datalist"
     transform: "@validate#preprocessing"
-    cache_rate: 0.125
+    cache_rate: 1.0
     num_workers: 4
     copy_cache: false
   dataloader:
