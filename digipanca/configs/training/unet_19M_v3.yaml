@@ -91,12 +91,6 @@ train:
     b_min: 0
     b_max: 1
     clip: true
-  - _target_: EnsureTyped
-    keys:
-    - "@image_key"
-    - "@label_key"
-    device: "@device"
-    track_meta: false
   - _target_: SpatialPadd
     keys:
     - "@image_key"
@@ -113,7 +107,7 @@ train:
     - "@image_key"
     - "@label_key"
     dtype:
-    - "$np.float16"
+    - "$np.float32"
     - "$np.uint8"
   - _target_: CopyItemsd
     keys: "@label_key"
@@ -132,6 +126,12 @@ train:
     dtype: 
     - "$torch.float32"
     - "$torch.uint8"
+  - _target_: EnsureTyped
+    keys:
+    - "@image_key"
+    - "@label_key"
+    device: "@device"
+    track_meta: false
   random_transforms:
   - _target_: RandCropByLabelClassesd
     keys:
