@@ -91,17 +91,6 @@ train:
     b_min: 0
     b_max: 1
     clip: true
-  - _target_: SpatialPadd
-    keys:
-    - "@image_key"
-    - "@label_key"
-    spatial_size:
-    - 96
-    - 96
-    - 96
-    mode:
-    - reflect
-    - constant
   - _target_: CastToTyped
     keys:
     - "@image_key"
@@ -132,6 +121,19 @@ train:
     - "@label_key"
     device: "@device"
     track_meta: false
+  - _target_: SpatialPadd
+    keys:
+    - "@image_key"
+    - "@label_key"
+    - label4crop
+    spatial_size:
+    - 96
+    - 96
+    - 96
+    mode:
+    - reflect
+    - constant
+    - constant
   random_transforms:
   - _target_: RandCropByLabelClassesd
     keys:
