@@ -1,0 +1,363 @@
+---
+imports:
+- "$import glob"
+- "$import json"
+- "$import os"
+- "$import ignite"
+- "$from scipy import ndimage"
+input_channels: 1
+output_classes: 5
+bundle_root: "."
+ckpt_dir: "$@bundle_root + '/experiments/monai_bundle/unet_19M_v4/models'"
+output_dir: "$@bundle_root + '/experiments/monai_bundle/unet_19M_v4/runs'"
+dataset_dir: "data/prepared_2"
+data_list_file_path: "$@bundle_root + '/data/splits/dataset_0.json'"
+train_datalist: "$monai.data.load_decathlon_datalist(@data_list_file_path, data_list_key='training',
+  base_dir=@dataset_dir)"
+val_datalist: "$monai.data.load_decathlon_datalist(@data_list_file_path, data_list_key='validation',
+  base_dir=@dataset_dir)"
+device: "$torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')"
+network_def:
+  _target_: monai.networks.nets.UNet
+  spatial_dims: 3
+  in_channels: "@input_channels"
+  out_channels: "@output_classes"
+  channels: [32, 64, 128, 256, 512]
+  strides: [2, 2, 2, 2]
+  num_res_units: 2
+  norm: "batch"
+  dropout: 0.2
+network: "$@network_def.to(@device)"
+loss:
+  _target_: DiceCELoss
+  include_background: false
+  to_onehot_y: true
+  softmax: true
+  squared_pred: true
+  batch: true
+  smooth_nr: 1.0e-05
+  smooth_dr: 1.0e-05
+optimizer:
+  _target_: torch.optim.SGD
+  params: "$@network.parameters()"
+  momentum: 0.9
+  weight_decay: 4.0e-05
+  lr: 0.025
+lr_scheduler:
+  _target_: torch.optim.lr_scheduler.StepLR
+  optimizer: "@optimizer"
+  step_size: 80
+  gamma: 0.5
+image_key: image
+label_key: label
+val_interval: 10
+train:
+  deterministic_transforms:
+  - _target_: LoadImaged
+    keys:
+    - "@image_key"
+    - "@label_key"
+    image_only: false
+  - _target_: EnsureChannelFirstd
+    keys:
+    - "@image_key"
+    - "@label_key"
+  - _target_: Orientationd
+    keys:
+    - "@image_key"
+    - "@label_key"
+    axcodes: RAS
+  - _target_: Spacingd
+    keys:
+    - "@image_key"
+    - "@label_key"
+    pixdim:
+    - 1
+    - 1
+    - 1
+    mode:
+    - bilinear
+    - nearest
+    align_corners:
+    - true
+    - true
+  - _target_: CastToTyped
+    keys: "@image_key"
+    dtype: "$torch.float32"
+  - _target_: ScaleIntensityRanged
+    keys: "@image_key"
+    a_min: -87
+    a_max: 199
+    b_min: 0
+    b_max: 1
+    clip: true
+  - _target_: CastToTyped
+    keys:
+    - "@image_key"
+    - "@label_key"
+    dtype:
+    - "$np.float32"
+    - "$np.uint8"
+  - _target_: CastToTyped
+    keys: 
+    - "@image_key"
+    - "@label_key"
+    dtype: 
+    - "$torch.float32"
+    - "$torch.uint8"
+  - _target_: SpatialPadd
+    keys:
+    - "@image_key"
+    - "@label_key"
+    spatial_size:
+    - 96
+    - 96
+    - 96
+    mode:
+    - reflect
+    - constant
+  - _target_: EnsureTyped
+    keys:
+    - "@image_key"
+    - "@label_key"
+    device: "@device"
+    track_meta: false
+  random_transforms:
+  - _target_: RandCropByLabelClassesd
+    keys:
+    - "@image_key"
+    - "@label_key"
+    label_key: "@label_key"
+    num_classes: "@output_classes"
+    ratios: "$[1, 3, 5, 3, 3]"
+    spatial_size:
+    - 96
+    - 96
+    - 96
+    num_samples: 2
+  - _target_: Rand3DElasticd
+    keys:
+    - "@image_key"
+    - "@label_key"
+    sigma_range:
+    - 3.0
+    - 5.0
+    magnitude_range:
+    - 50
+    - 100
+    prob: 0.15
+  - _target_: RandRotated
+    keys:
+    - "@image_key"
+    - "@label_key"
+    range_x: 0.3
+    range_y: 0.3
+    range_z: 0.3
+    mode:
+    - bilinear
+    - nearest
+    prob: 0.2
+  - _target_: RandZoomd
+    keys:
+    - "@image_key"
+    - "@label_key"
+    min_zoom: 0.8
+    max_zoom: 1.2
+    mode:
+    - trilinear
+    - nearest
+    align_corners:
+    - true
+    -
+    prob: 0.16
+  - _target_: RandGaussianSmoothd
+    keys: "@image_key"
+    sigma_x:
+    - 0.5
+    - 1.15
+    sigma_y:
+    - 0.5
+    - 1.15
+    sigma_z:
+    - 0.5
+    - 1.15
+    prob: 0.15
+  - _target_: RandBiasFieldd
+    keys: "@image_key"
+    degree: 3
+    coeff_range:
+    - 0.0
+    - 0.1
+    prob: 0.15
+  - _target_: RandScaleIntensityd
+    keys: "@image_key"
+    factors: 0.3
+    prob: 0.5
+  - _target_: RandShiftIntensityd
+    keys: "@image_key"
+    offsets: 0.1
+    prob: 0.5
+  - _target_: RandGaussianNoised
+    keys: "@image_key"
+    std: 0.01
+    prob: 0.15
+  - _target_: RandFlipd
+    keys:
+    - "@image_key"
+    - "@label_key"
+    spatial_axis: 0
+    prob: 0.5
+  - _target_: RandFlipd
+    keys:
+    - "@image_key"
+    - "@label_key"
+    spatial_axis: 1
+    prob: 0.5
+  - _target_: RandFlipd
+    keys:
+    - "@image_key"
+    - "@label_key"
+    spatial_axis: 2
+    prob: 0.5
+  - _target_: CastToTyped
+    keys:
+    - "@image_key"
+    - "@label_key"
+    dtype:
+    - "$torch.float32"
+    - "$torch.uint8"
+  - _target_: ToTensord
+    keys:
+    - "@image_key"
+    - "@label_key"
+  preprocessing:
+    _target_: Compose
+    transforms: "$@train#deterministic_transforms + @train#random_transforms"
+  dataset:
+    _target_: CacheDataset
+    data: "@train_datalist"
+    transform: "@train#preprocessing"
+    cache_rate: 1.0
+    num_workers: 4
+    copy_cache: true
+  dataloader:
+    _target_: ThreadDataLoader
+    dataset: "@train#dataset"
+    batch_size: 2
+    shuffle: true
+    num_workers: 0
+  inferer:
+    _target_: SimpleInferer
+  postprocessing:
+    _target_: Compose
+    transforms:
+    - _target_: Activationsd
+      keys: pred
+      softmax: true
+    - _target_: AsDiscreted
+      keys:
+      - pred
+      - label
+      argmax:
+      - true
+      - false
+      to_onehot: "@output_classes"
+  handlers:
+  - _target_: LrScheduleHandler
+    lr_scheduler: "@lr_scheduler"
+    print_lr: true
+  - _target_: ValidationHandler
+    validator: "@validate#evaluator"
+    epoch_level: true
+    interval: "@val_interval"
+  - _target_: StatsHandler
+    tag_name: train_loss
+    output_transform: "$monai.handlers.from_engine(['loss'], first=True)"
+  - _target_: TensorBoardStatsHandler
+    log_dir: "@output_dir"
+    tag_name: train_loss
+    output_transform: "$monai.handlers.from_engine(['loss'], first=True)"
+  key_metric:
+    train_accuracy:
+      _target_: ignite.metrics.Accuracy
+      output_transform: "$monai.handlers.from_engine(['pred', 'label'])"
+  additional_metrics:
+    train_loss_avg:
+      _target_: ignite.metrics.Average
+      output_transform: "$monai.handlers.from_engine(['loss'], first=True)"
+  trainer:
+    _target_: SupervisedTrainer
+    max_epochs: 600
+    device: "@device"
+    train_data_loader: "@train#dataloader"
+    network: "@network"
+    loss_function: "@loss"
+    optimizer: "@optimizer"
+    inferer: "@train#inferer"
+    postprocessing: "@train#postprocessing"
+    key_train_metric: "@train#key_metric"
+    additional_metrics: "@train#additional_metrics"
+    train_handlers: "@train#handlers"
+    amp: true
+validate:
+  preprocessing:
+    _target_: Compose
+    transforms: "%train#deterministic_transforms"
+  dataset:
+    _target_: CacheDataset
+    data: "@val_datalist"
+    transform: "@validate#preprocessing"
+    cache_rate: 1.0
+    num_workers: 4
+    copy_cache: true
+  dataloader:
+    _target_: ThreadDataLoader
+    dataset: "@validate#dataset"
+    batch_size: 1
+    shuffle: false
+    num_workers: 0
+  inferer:
+    _target_: SlidingWindowInferer
+    roi_size:
+    - 96
+    - 96
+    - 96
+    sw_batch_size: 6
+    overlap: 0.625
+  postprocessing: "%train#postprocessing"
+  handlers:
+  - _target_: StatsHandler
+    iteration_log: false
+  - _target_: TensorBoardStatsHandler
+    log_dir: "@output_dir"
+    iteration_log: false
+  - _target_: CheckpointSaver
+    save_dir: "@ckpt_dir"
+    save_dict:
+      model: "@network"
+    save_key_metric: true
+    key_metric_filename: model.pt
+  key_metric:
+    val_mean_dice:
+      _target_: MeanDice
+      include_background: false
+      output_transform: "$monai.handlers.from_engine(['pred', 'label'])"
+  additional_metrics:
+    val_accuracy:
+      _target_: ignite.metrics.Accuracy
+      output_transform: "$monai.handlers.from_engine(['pred', 'label'])"
+  evaluator:
+    _target_: SupervisedEvaluator
+    device: "@device"
+    val_data_loader: "@validate#dataloader"
+    network: "@network"
+    inferer: "@validate#inferer"
+    postprocessing: "@validate#postprocessing"
+    key_val_metric: "@validate#key_metric"
+    additional_metrics: "@validate#additional_metrics"
+    val_handlers: "@validate#handlers"
+    amp: true
+initialize:
+- "$monai.utils.set_determinism(seed=42)"
+run:
+- "$@train#trainer.run()"
