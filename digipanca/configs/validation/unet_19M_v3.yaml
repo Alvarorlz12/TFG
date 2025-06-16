@@ -9,7 +9,7 @@ input_channels: 1
 output_classes: 5
 bundle_root: "."
 ckpt_dir: "$@bundle_root + '/experiments/monai_bundle/unet_19M_v3/models'"
-output_dir: "$@bundle_root + '/experiments/monai_bundle/unet_19M_v3/runs'"
+output_dir: "$@bundle_root + '/experiments/monai_bundle/unet_19M_v3/full_eval'"
 dataset_dir: "data/prepared_2"
 data_list_file_path: "$@bundle_root + '/data/splits/dataset_0.json'"
 train_datalist: "$monai.data.load_decathlon_datalist(@data_list_file_path, data_list_key='training',

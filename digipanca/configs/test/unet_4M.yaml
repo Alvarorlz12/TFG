@@ -8,13 +8,13 @@ imports:
 input_channels: 1
 output_classes: 5
 bundle_root: "."
-ckpt_dir: "$@bundle_root + '/experiments/monai_bundle/unet_19M_v3/models'"
-output_dir: "$@bundle_root + '/experiments/monai_bundle/unet_19M_v3/runs'"
-dataset_dir: "data/prepared_2"
-data_list_file_path: "$@bundle_root + '/data/splits/dataset_0.json'"
+ckpt_dir: "$@bundle_root + '/experiments/monai_bundle/unet_4M/models'"
+output_dir: "$@bundle_root + '/experiments/monai_bundle/unet_4M/eval_test'"
+dataset_dir: "data/prepared"
+data_list_file_path: "$@bundle_root + '/data/splits/datalist.json'"
 train_datalist: "$monai.data.load_decathlon_datalist(@data_list_file_path, data_list_key='training',
   base_dir=@dataset_dir)"
-val_datalist: "$monai.data.load_decathlon_datalist(@data_list_file_path, data_list_key='validation',
+val_datalist: "$monai.data.load_decathlon_datalist(@data_list_file_path, data_list_key='test',
   base_dir=@dataset_dir)"
 device: "$torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')"
 network_def:
@@ -22,11 +22,10 @@ network_def:
   spatial_dims: 3
   in_channels: "@input_channels"
   out_channels: "@output_classes"
-  channels: [32, 64, 128, 256, 512]
+  channels: [16, 32, 64, 128, 256]
   strides: [2, 2, 2, 2]
   num_res_units: 2
   norm: "batch"
-  dropout: 0.2
 network: "$@network_def.to(@device)"
 loss:
   _target_: DiceCELoss
@@ -96,7 +95,7 @@ train:
     - "@image_key"
     - "@label_key"
     dtype:
-    - "$np.float32"
+    - "$np.float16"
     - "$np.uint8"
   - _target_: CopyItemsd
     keys: "@label_key"
@@ -106,17 +105,15 @@ train:
   - _target_: Lambdad
     keys: label4crop
     func: "$lambda x, s=@output_classes: np.concatenate(tuple([ndimage.binary_dilation((x==_k).astype(x.dtype),
-      iterations=5).astype(float) for _k in range(s)]), axis=0)"
+      iterations=48).astype(float) for _k in range(s)]), axis=0)"
     overwrite: true
-  - _target_: CastToTyped
-    keys: 
+  - _target_: EnsureTyped
+    keys:
     - "@image_key"
     - "@label_key"
-    - label4crop
-    dtype: 
-    - "$torch.float32"
-    - "$torch.uint8"
-    - "$torch.uint8"
+  - _target_: CastToTyped
+    keys: "@image_key"
+    dtype: "$torch.float32"
   - _target_: SpatialPadd
     keys:
     - "@image_key"
@@ -130,38 +127,22 @@ train:
     - reflect
     - constant
     - constant
-  - _target_: EnsureTyped
-    keys:
-    - "@image_key"
-    - "@label_key"
-    device: "@device"
-    track_meta: true
   random_transforms:
   - _target_: RandCropByLabelClassesd
     keys:
     - "@image_key"
     - "@label_key"
-    label_key: "label4crop"
+    label_key: label4crop
     num_classes: "@output_classes"
-    ratios: "$[1, 2, 3, 2, 2]"
+    ratios: "$[1,] * @output_classes"
     spatial_size:
     - 96
     - 96
     - 96
-    num_samples: 2
-  - _target_: DeleteItemsd
+    num_samples: 1
+  - _target_: Lambdad
     keys: label4crop
-  - _target_: Rand3DElasticd
-    keys:
-    - "@image_key"
-    - "@label_key"
-    sigma_range:
-    - 3.0
-    - 5.0
-    magnitude_range:
-    - 50
-    - 100
-    prob: 0.15
+    func: "$lambda x: 0"
   - _target_: RandRotated
     keys:
     - "@image_key"
@@ -197,13 +178,6 @@ train:
     sigma_z:
     - 0.5
     - 1.15
-    prob: 0.15
-  - _target_: RandBiasFieldd
-    keys: "@image_key"
-    degree: 3
-    coeff_range:
-    - 0.0
-    - 0.1
     prob: 0.15
   - _target_: RandScaleIntensityd
     keys: "@image_key"
@@ -253,11 +227,10 @@ train:
     _target_: CacheDataset
     data: "@train_datalist"
     transform: "@train#preprocessing"
-    cache_rate: 1.0
+    cache_rate: 0.125
     num_workers: 4
-    copy_cache: false
   dataloader:
-    _target_: ThreadDataLoader
+    _target_: DataLoader
     dataset: "@train#dataset"
     batch_size: 2
     shuffle: true
@@ -297,13 +270,9 @@ train:
     train_accuracy:
       _target_: ignite.metrics.Accuracy
       output_transform: "$monai.handlers.from_engine(['pred', 'label'])"
-  additional_metrics:
-    train_loss_avg:
-      _target_: ignite.metrics.Average
-      output_transform: "$monai.handlers.from_engine(['loss'], first=True)"
   trainer:
     _target_: SupervisedTrainer
-    max_epochs: 600
+    max_epochs: 400
     device: "@device"
     train_data_loader: "@train#dataloader"
     network: "@network"
@@ -312,7 +281,6 @@ train:
     inferer: "@train#inferer"
     postprocessing: "@train#postprocessing"
     key_train_metric: "@train#key_metric"
-    additional_metrics: "@train#additional_metrics"
     train_handlers: "@train#handlers"
     amp: true
 validate:
@@ -323,15 +291,13 @@ validate:
     _target_: CacheDataset
     data: "@val_datalist"
     transform: "@validate#preprocessing"
-    cache_rate: 1.0
-    num_workers: 4
-    copy_cache: false
+    cache_rate: 0.125
   dataloader:
-    _target_: ThreadDataLoader
+    _target_: DataLoader
     dataset: "@validate#dataset"
     batch_size: 1
     shuffle: false
-    num_workers: 0
+    num_workers: 4
   inferer:
     _target_: SlidingWindowInferer
     roi_size:
@@ -374,6 +340,6 @@ validate:
     val_handlers: "@validate#handlers"
     amp: true
 initialize:
-- "$monai.utils.set_determinism(seed=42)"
+- "$monai.utils.set_determinism(seed=123)"
 run:
 - "$@train#trainer.run()"

@@ -8,9 +8,9 @@ imports:
 input_channels: 1
 output_classes: 5
 bundle_root: "."
-ckpt_dir: "$@bundle_root + '/experiments/monai_bundle/unet_19M_v3/models'"
-output_dir: "$@bundle_root + '/experiments/monai_bundle/unet_19M_v3/runs'"
-dataset_dir: "data/prepared_2"
+ckpt_dir: "$@bundle_root + '/experiments/monai_bundle/unet_70M_2/models'"
+output_dir: "$@bundle_root + '/experiments/monai_bundle/unet_70M_2/full_eval'"
+dataset_dir: "data/prepared"
 data_list_file_path: "$@bundle_root + '/data/splits/dataset_0.json'"
 train_datalist: "$monai.data.load_decathlon_datalist(@data_list_file_path, data_list_key='training',
   base_dir=@dataset_dir)"
@@ -22,10 +22,10 @@ network_def:
   spatial_dims: 3
   in_channels: "@input_channels"
   out_channels: "@output_classes"
-  channels: [32, 64, 128, 256, 512]
+  channels: [64, 128, 256, 512, 1024]
   strides: [2, 2, 2, 2]
   num_res_units: 2
-  norm: "batch"
+  norm: "instance"
   dropout: 0.2
 network: "$@network_def.to(@device)"
 loss:
@@ -340,7 +340,28 @@ validate:
     - 96
     sw_batch_size: 6
     overlap: 0.625
-  postprocessing: "%train#postprocessing"
+  postprocessing:
+    _target_: Compose
+    transforms:
+    - _target_: CopyItemsd
+      keys:
+      - pred
+      - label
+      names:
+      - pred_raw
+      - label_raw
+      times: 1
+    - _target_: Activationsd
+      keys: pred
+      softmax: true
+    - _target_: AsDiscreted
+      keys:
+      - pred
+      - label
+      argmax:
+      - true
+      - false
+      to_onehot: "@output_classes"
   handlers:
   - _target_: StatsHandler
     iteration_log: false
@@ -362,6 +383,10 @@ validate:
     val_accuracy:
       _target_: ignite.metrics.Accuracy
       output_transform: "$monai.handlers.from_engine(['pred', 'label'])"
+    val_loss_avg:
+      _target_: ignite.metrics.Loss
+      loss_fn: "@loss"
+      output_transform: "$monai.handlers.from_engine(['pred_raw', 'label_raw'])"
   evaluator:
     _target_: SupervisedEvaluator
     device: "@device"

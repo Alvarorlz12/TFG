@@ -8,28 +8,27 @@ imports:
 input_channels: 1
 output_classes: 5
 bundle_root: "."
-ckpt_dir: "$@bundle_root + '/experiments/monai_bundle/unet_19M_v3/models'"
-output_dir: "$@bundle_root + '/experiments/monai_bundle/unet_19M_v3/runs'"
-dataset_dir: "data/prepared_2"
+ckpt_dir: "$@bundle_root + '/experiments/monai_bundle/segresnet_no_lrs/models'"
+output_dir: "$@bundle_root + '/experiments/monai_bundle/segresnet_no_lrs/eval_test'"
+dataset_dir: "data/prepared"
 data_list_file_path: "$@bundle_root + '/data/splits/dataset_0.json'"
 train_datalist: "$monai.data.load_decathlon_datalist(@data_list_file_path, data_list_key='training',
   base_dir=@dataset_dir)"
-val_datalist: "$monai.data.load_decathlon_datalist(@data_list_file_path, data_list_key='validation',
+val_datalist: "$monai.data.load_decathlon_datalist(@data_list_file_path, data_list_key='test',
   base_dir=@dataset_dir)"
 device: "$torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')"
 network_def:
-  _target_: monai.networks.nets.UNet
+  _target_: monai.networks.nets.SegResNet
   spatial_dims: 3
   in_channels: "@input_channels"
   out_channels: "@output_classes"
-  channels: [32, 64, 128, 256, 512]
-  strides: [2, 2, 2, 2]
-  num_res_units: 2
-  norm: "batch"
-  dropout: 0.2
+  init_filters: 32
+  blocks_down: [1, 2, 3, 4]
+  blocks_up: [1, 1, 1]
+  dropout_prob: 0.2
 network: "$@network_def.to(@device)"
 loss:
-  _target_: DiceCELoss
+  _target_: DiceFocalLoss
   include_background: false
   to_onehot_y: true
   softmax: true
@@ -38,16 +37,10 @@ loss:
   smooth_nr: 1.0e-05
   smooth_dr: 1.0e-05
 optimizer:
-  _target_: torch.optim.SGD
+  _target_: torch.optim.AdamW
   params: "$@network.parameters()"
-  momentum: 0.9
-  weight_decay: 4.0e-05
-  lr: 0.025
-lr_scheduler:
-  _target_: torch.optim.lr_scheduler.StepLR
-  optimizer: "@optimizer"
-  step_size: 80
-  gamma: 0.5
+  lr: 1.0e-4
+  weight_decay: 1.0e-05
 image_key: image
 label_key: label
 val_interval: 10
@@ -86,8 +79,8 @@ train:
     dtype: "$torch.float32"
   - _target_: ScaleIntensityRanged
     keys: "@image_key"
-    a_min: -87
-    a_max: 199
+    a_min: -150
+    a_max: 250
     b_min: 0
     b_max: 1
     clip: true
@@ -254,7 +247,7 @@ train:
     data: "@train_datalist"
     transform: "@train#preprocessing"
     cache_rate: 1.0
-    num_workers: 4
+    num_workers: 6
     copy_cache: false
   dataloader:
     _target_: ThreadDataLoader
@@ -279,9 +272,6 @@ train:
       - false
       to_onehot: "@output_classes"
   handlers:
-  - _target_: LrScheduleHandler
-    lr_scheduler: "@lr_scheduler"
-    print_lr: true
   - _target_: ValidationHandler
     validator: "@validate#evaluator"
     epoch_level: true
@@ -340,7 +330,28 @@ validate:
     - 96
     sw_batch_size: 6
     overlap: 0.625
-  postprocessing: "%train#postprocessing"
+  postprocessing:
+    _target_: Compose
+    transforms:
+    - _target_: CopyItemsd
+      keys:
+      - pred
+      - label
+      names:
+      - pred_raw
+      - label_raw
+      times: 1
+    - _target_: Activationsd
+      keys: pred
+      softmax: true
+    - _target_: AsDiscreted
+      keys:
+      - pred
+      - label
+      argmax:
+      - true
+      - false
+      to_onehot: "@output_classes"
   handlers:
   - _target_: StatsHandler
     iteration_log: false
@@ -362,6 +373,10 @@ validate:
     val_accuracy:
       _target_: ignite.metrics.Accuracy
       output_transform: "$monai.handlers.from_engine(['pred', 'label'])"
+    val_loss_avg:
+      _target_: ignite.metrics.Loss
+      loss_fn: "@loss"
+      output_transform: "$monai.handlers.from_engine(['pred_raw', 'label_raw'])"
   evaluator:
     _target_: SupervisedEvaluator
     device: "@device"
